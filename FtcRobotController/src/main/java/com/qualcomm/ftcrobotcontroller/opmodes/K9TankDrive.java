@@ -35,6 +35,8 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.robotcore.hardware.ColorSensor;
+
 
 /**
  * TeleOp Mode
@@ -70,7 +72,14 @@ public class K9TankDrive extends OpMode {
 	DcMotor motorLeft;
 	Servo claw;
 	Servo arm;
+	ColorSensor colorSensor;
 
+	double thisTime = 0;
+	double lastTime = 0;
+	int lastPos1 = 0;
+	int lastPos2 = 0;
+	double rpm1 = 0;
+	double rpm2 = 0;
 	/**
 	 * Constructor
 	 */
@@ -101,12 +110,17 @@ public class K9TankDrive extends OpMode {
 		 *    "servo_1" controls the arm joint of the manipulator.
 		 *    "servo_6" controls the claw joint of the manipulator.
 		 */
-		motorRight = hardwareMap.dcMotor.get("motor_2");
-		motorLeft = hardwareMap.dcMotor.get("motor_1");
-		motorLeft.setDirection(DcMotor.Direction.REVERSE);
+		motorRight = hardwareMap.dcMotor.get("moto2");
+		motorLeft = hardwareMap.dcMotor.get("moto1");
+		motorRight.setDirection(DcMotor.Direction.REVERSE);
 		
 		arm = hardwareMap.servo.get("servo_1");
 		claw = hardwareMap.servo.get("servo_6");
+
+		colorSensor = hardwareMap.colorSensor.get("color1");
+
+		colorSensor.enableLed(false);
+
 
 		// assign the starting position of the wrist and claw
 		armPosition = 0.2;
@@ -127,6 +141,29 @@ public class K9TankDrive extends OpMode {
 		 * Gamepad 1 controls the motors via the left stick, and it controls the
 		 * wrist/claw via the a,b, x, y buttons
 		 */
+
+		// Compute rotational speed of wheels
+		if (lastTime == 0.0) {
+			lastTime = this.time;
+			lastPos1 = motorLeft.getCurrentPosition();
+			lastPos2 = motorRight.getCurrentPosition();
+		}
+
+		thisTime = this.time;
+		if ((thisTime - lastTime) >= 0.1) {
+			int curPos1 = motorLeft.getCurrentPosition();
+			int curPos2 = motorRight.getCurrentPosition();
+			double diffTime = thisTime - lastTime;
+
+			rpm1 = (double)(curPos1 - lastPos1) * 60.0 / diffTime / 1120.0;
+			rpm2 = (double)(curPos2 - lastPos2) * 60.0 / diffTime / 1120.0;
+
+
+			lastTime = thisTime;
+			lastPos1 = curPos1;
+			lastPos2 = curPos2;
+
+		}
 
         // tank drive
         // note that if y equal -1 then joystick is pushed all of the way forward.
@@ -196,11 +233,17 @@ public class K9TankDrive extends OpMode {
 		 * are currently write only.
 		 */
 
-		telemetry.addData("Text", "*** Robot Data***");
-        telemetry.addData("arm", "arm:  " + String.format("%.2f", armPosition));
-        telemetry.addData("claw", "claw:  " + String.format("%.2f", clawPosition));
-		telemetry.addData("left tgt pwr",  "left  pwr: " + String.format("%.2f", left));
-		telemetry.addData("right tgt pwr", "right pwr: " + String.format("%.2f", right));
+		//telemetry.addData("Text", "*** Robot Data***");
+		telemetry.addData("Time",String.format("%f",this.time));
+        //telemetry.addData("arm", "arm:  " + String.format("%.2f", armPosition));
+        //telemetry.addData("claw", "claw:  " + String.format("%.2f", clawPosition));
+		telemetry.addData("left encoder",  "left  rpm: " + String.format("%.2f", rpm1));
+		telemetry.addData("right encoder", "right rpm: " + String.format("%.2f", rpm2));
+		telemetry.addData("Clear", colorSensor.alpha());
+		telemetry.addData("Red  ", colorSensor.red());
+		telemetry.addData("Green", colorSensor.green());
+		telemetry.addData("Blue ", colorSensor.blue());
+
 	}
 
 	/*
