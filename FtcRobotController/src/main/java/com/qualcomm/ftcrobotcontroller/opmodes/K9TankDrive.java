@@ -33,6 +33,7 @@ package com.qualcomm.ftcrobotcontroller.opmodes;
 
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorController.RunMode;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.hardware.ColorSensor;
@@ -125,6 +126,24 @@ public class K9TankDrive extends OpMode {
 		// assign the starting position of the wrist and claw
 		armPosition = 0.2;
 		clawPosition = 0.2;
+
+		motorLeft.setChannelMode(RunMode.RESET_ENCODERS);
+		motorLeft.setChannelMode(RunMode.RUN_TO_POSITION);
+		//motorRight.setChannelMode(RunMode.RUN_TO_POSITION);
+
+		motorLeft.setTargetPosition(5000);
+		//motorRight.setTargetPosition(5000);
+
+		motorLeft.setPower(0.25);
+		//motorRight.setPower(0.25);
+
+		while (motorLeft.isBusy()) {
+			//Thread.sleep(200,0);
+		}
+
+		//motorLeft.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
+		//motorRight.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
+
 	}
 
 	/*
