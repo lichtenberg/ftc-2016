@@ -94,7 +94,6 @@ class I2CDeviceReader {
 }
 
 
-
 public class MitchLineFollow extends OpMode {
 
 	/*
@@ -150,10 +149,10 @@ public class MitchLineFollow extends OpMode {
 		colorSensor = hardwareMap.colorSensor.get("color1");
 		distanceSensor = hardwareMap.opticalDistanceSensor.get("dist1");
 
-		// gyro - for future use, it doesn't work yet.   I2c driver is *nasty*.
 		gyro = hardwareMap.i2cDevice.get("gyro1");
 
 		colorSensor.enableLed(true);
+        
 
 
 	}
@@ -173,10 +172,19 @@ public class MitchLineFollow extends OpMode {
 		} else {
 			if (gyroReader.isDone()) {
 				byte[] buffer = gyroReader.getReadBuffer();
-				curHeading = (int) normalizeHeading(((buffer[1] << 8) | buffer[0]));
+				int msb = (buffer[1] & 0xFF);
+				int lsb = (buffer[0] & 0xFF);
+				curHeading = (msb << 8) | lsb;
+				telemetry.addData("rawgyro", String.format("%02x %02x %d", buffer[1],buffer[0],curHeading));
 				gyroReader = null;
 			}
 		}
+	}
+
+	private void startTurning(int howMuch)
+	{
+		destHeading = normalizeHeading(curHeading + howMuch);
+		currentMode = 2;
 	}
 
 	@Override
@@ -272,15 +280,25 @@ public class MitchLineFollow extends OpMode {
 
 	}
 
+	private int subtractHeadings(int a,int b)
+	{
+		int difference;
+
+		difference = a - b;
+
+		if (difference > 180) return -(360 - difference);
+		if (difference <= -180) return (360 + difference);
+
+		return difference;
+	}
+
 	private void gyroTurnMode()
 	{
-		int myHeading = curHeading;
-		int degreesToTurn;
+		int degreesToTurn = subtractHeadings(destHeading,curHeading);
 		Boolean shouldTurnLeft;
+		double turnSpeed = 0.30;
 
-		degreesToTurn = Math.abs((curHeading - destHeading) % 360);
-		if (degreesToTurn > 180) degreesToTurn = 360 - degreesToTurn;
-		if ((curHeading - destHeading) < 0) {  /// XXX FIXME
+		if (degreesToTurn > 0) {
 			shouldTurnLeft = true;
 		} else {
 			shouldTurnLeft = false;
@@ -289,23 +307,38 @@ public class MitchLineFollow extends OpMode {
 
 		// If we need to turn
 
-		DbgLog.msg("TURN: myHeading:" + myHeading + " dest:" + destHeading + " left:" + degreesToTurn + (shouldTurnLeft ? " LEFT" : " RIGHT"));
+		DbgLog.msg("TURN: myHeading:" + curHeading + " dest " + (destHeading) + " left:" + degreesToTurn + (shouldTurnLeft ? " LEFT" : " RIGHT"));
 
-		if (degreesToTurn <= 5) {
+		if (Math.abs(degreesToTurn) <= 5) {
 			motorLeft.setPower(0);
 			motorRight.setPower(0);
 			currentMode = 0;
 
 		} else if (shouldTurnLeft) {
-			motorLeft.setPower(-0.15);
-			motorRight.setPower(0.15);
+			motorLeft.setPower(-turnSpeed);
+			motorRight.setPower(turnSpeed);
 
 		} else {
-			motorLeft.setPower(0.15);
-			motorRight.setPower(-0.15);
+			motorLeft.setPower(turnSpeed);
+			motorRight.setPower(-turnSpeed);
 
 		}
 
+	}
+
+
+	public void moveALittle(Boolean backwards)
+	{
+		motorLeft.setChannelMode(RunMode.RUN_TO_POSITION);
+		motorRight.setChannelMode(RunMode.RUN_TO_POSITION);
+
+		motorLeft.setTargetPosition(motorLeft.getCurrentPosition() + (backwards ? -2400 : 2400));
+		motorRight.setTargetPosition(motorRight.getCurrentPosition() + (backwards ? -2400 : 2400));
+
+		motorLeft.setPower(0.2);
+		motorRight.setPower(0.2);
+
+		currentMode = 4;
 	}
 	/*
 	 * This method will be called repeatedly in a loop
@@ -337,26 +370,45 @@ public class MitchLineFollow extends OpMode {
 			case 2:
 				gyroTurnMode();
 				break;
+			case 3:
+				moveALittle(false);
+				break;
+			case 5:
+				moveALittle(true);
+				break;
+			case 4:
+				if (!motorLeft.isBusy() && !motorRight.isBusy()) {
+					motorLeft.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
+					motorRight.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
+					motorLeft.setPower(0);
+					motorRight.setPower(0);
+					currentMode = 0;
+					DbgLog.msg("DONE WITH ENCODER RUN");
+				} else {
+					DbgLog.msg("WAITING FOR ENCODER RUN");
+				}
 		}
 
 		if (gamepad1.a && (currentMode != 0)) {
 			lineDetected = false;
+			motorLeft.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
+			motorRight.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
+
 			currentMode = 0;
 		}
 		else if (gamepad1.b && (currentMode != 1)) {
 			lineDetected = false;
 			currentMode = 1;
 		} else if (gamepad1.x && (currentMode != 2)) {
-			destHeading = normalizeHeading(curHeading + 90);
-			DbgLog.msg("STARTING TURN to " + destHeading + " currently " + curHeading);
-
-			currentMode = 2;
+			startTurning(90);
+			DbgLog.msg("STARTING TURN");
 		} else if (gamepad1.y && (currentMode != 2)) {
-
-			destHeading = normalizeHeading(curHeading - 90);
-			DbgLog.msg("STARTING TURN to " + destHeading + " currently " + curHeading);
-
-			currentMode = 2;
+			startTurning(-90);
+			DbgLog.msg("STARTING TURN");
+		} else if (gamepad1.left_bumper) {
+			currentMode = 3;
+		} else if (gamepad1.right_bumper) {
+			currentMode = 5;
 		}
 
 
@@ -365,14 +417,12 @@ public class MitchLineFollow extends OpMode {
 		 */
 
 		//telemetry.addData("Text", "*** Robot Data***");
-		telemetry.addData("Time",String.format("%f", this.time));
-		telemetry.addData("Clear", colorSensor.alpha());
-		telemetry.addData("Red  ", colorSensor.red());
-		telemetry.addData("Green", colorSensor.green());
-		telemetry.addData("Blue ", colorSensor.blue());
+		telemetry.addData("Time", String.format("%f", this.time));
+		telemetry.addData("Color:", "A:" + colorSensor.alpha() + " R:" + colorSensor.red() + " G:" + colorSensor.green() + " B:" + colorSensor.blue());
 		telemetry.addData("OptDist", distanceSensor.getLightDetectedRaw());
-		telemetry.addData("baseline",blackBaseLine + (lineDetected ? " line" : " no line"));
-		telemetry.addData("heading",curHeading + " dest " + destHeading);
+		telemetry.addData("baseline", blackBaseLine + (lineDetected ? " line" : " no line"));
+		telemetry.addData("heading", curHeading);
+		telemetry.addData("encoders","Left:"+motorLeft.getCurrentPosition() + " right:"+motorRight.getCurrentPosition());
 
 	}
 
