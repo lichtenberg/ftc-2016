@@ -43,6 +43,8 @@ import com.qualcomm.robotcore.hardware.DcMotorController.RunMode;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
+import com.qualcomm.ftcrobotcontroller.opmodes.ModernGyroReader;
+
 
 /**
  * TeleOp Mode
@@ -50,48 +52,7 @@ import com.qualcomm.robotcore.util.Range;
  * Enables control of the robot via the gamepad
  */
 
-class I2CDeviceReader {
 
-	private final I2cDevice device;
-	private boolean transaction_complete;
-	private boolean buffer_read_complete;
-	private byte[] device_data;
-
-	public I2CDeviceReader(I2cDevice i2cDevice, int i2cAddress, int memAddress, int num_bytes) {
-		this.device = i2cDevice;
-		device_data = null;
-		transaction_complete = false;
-		buffer_read_complete = false;
-		i2cDevice.enableI2cReadMode(i2cAddress, memAddress, num_bytes);
-		i2cDevice.setI2cPortActionFlag();
-		i2cDevice.writeI2cCacheToController();
-		i2cDevice.registerForI2cPortReadyCallback(new I2cController.I2cPortReadyCallback() {
-			public void portIsReady(int port) {
-				I2CDeviceReader.this.portDone();
-			}
-		});
-	}
-
-	public boolean isDone() {
-		return this.transaction_complete && buffer_read_complete;
-	}
-
-	private void portDone() {
-		if (!transaction_complete && device.isI2cPortReady()) {
-			transaction_complete = true;
-			device.readI2cCacheFromController();
-		}
-		else if (transaction_complete) {
-			device_data = this.device.getCopyOfReadBuffer();
-			device.deregisterForPortReadyCallback();
-			buffer_read_complete = true;
-		}
-	}
-
-	public byte[] getReadBuffer() {
-		return device_data;
-	}
-}
 
 
 public class MitchLineFollow extends OpMode {
@@ -107,16 +68,17 @@ public class MitchLineFollow extends OpMode {
 	ColorSensor colorSensor;
 	OpticalDistanceSensor distanceSensor;
 	I2cDevice gyro;
-	int curHeading;
 	int destHeading;
 
-	I2CDeviceReader gyroReader = null;
+	ModernGyroReader gyroReader;
 
 	int blackBaseLine = 0;
 
 	Boolean lineDetected = false;
 
 	int currentMode = 0;
+
+	Boolean currentLED = false;
 
 	/**
 	 * Constructor
@@ -150,6 +112,7 @@ public class MitchLineFollow extends OpMode {
 		distanceSensor = hardwareMap.opticalDistanceSensor.get("dist1");
 
 		gyro = hardwareMap.i2cDevice.get("gyro1");
+		gyroReader = new ModernGyroReader(gyro);
 
 		colorSensor.enableLed(true);
         
@@ -165,25 +128,11 @@ public class MitchLineFollow extends OpMode {
 		return heading;
 	}
 
-	private void checkGyro()
-	{
-		if (gyroReader == null) {
-			gyroReader = new I2CDeviceReader(gyro, 0x20, 0x04, 2);
-		} else {
-			if (gyroReader.isDone()) {
-				byte[] buffer = gyroReader.getReadBuffer();
-				int msb = (buffer[1] & 0xFF);
-				int lsb = (buffer[0] & 0xFF);
-				curHeading = (msb << 8) | lsb;
-				telemetry.addData("rawgyro", String.format("%02x %02x %d", buffer[1],buffer[0],curHeading));
-				gyroReader = null;
-			}
-		}
-	}
+
 
 	private void startTurning(int howMuch)
 	{
-		destHeading = normalizeHeading(curHeading + howMuch);
+		destHeading = normalizeHeading(gyroReader.getHeading() + howMuch);
 		currentMode = 2;
 	}
 
@@ -208,7 +157,7 @@ public class MitchLineFollow extends OpMode {
 		telemetry.addData("buttons", (gamepad1.a ? "A" : "") + (gamepad1.b ? "B" : "") +
 				(gamepad1.x ? "X" : "") + (gamepad1.y ? "Y" : ""));
 
-		checkGyro();
+		gyroReader.checkGyro();
 
 	}
 
@@ -294,9 +243,11 @@ public class MitchLineFollow extends OpMode {
 
 	private void gyroTurnMode()
 	{
+		int curHeading = gyroReader.getHeading();
+
 		int degreesToTurn = subtractHeadings(destHeading,curHeading);
 		Boolean shouldTurnLeft;
-		double turnSpeed = 0.30;
+		double turnSpeed = 0.10;
 
 		if (degreesToTurn > 0) {
 			shouldTurnLeft = true;
@@ -309,7 +260,11 @@ public class MitchLineFollow extends OpMode {
 
 		DbgLog.msg("TURN: myHeading:" + curHeading + " dest " + (destHeading) + " left:" + degreesToTurn + (shouldTurnLeft ? " LEFT" : " RIGHT"));
 
-		if (Math.abs(degreesToTurn) <= 5) {
+		if (Math.abs(degreesToTurn) <= 20) {
+			turnSpeed = 0.04;
+		}
+
+		if (Math.abs(degreesToTurn) <= 1) {
 			motorLeft.setPower(0);
 			motorRight.setPower(0);
 			currentMode = 0;
@@ -348,6 +303,17 @@ public class MitchLineFollow extends OpMode {
 	@Override
 	public void loop() {
 
+		Boolean newLED = currentLED;
+
+		if (gamepad1.dpad_up) newLED = true;
+		if (gamepad1.dpad_down) newLED = false;
+
+		if (newLED != currentLED) {
+			DbgLog.msg("Setting led to " + (newLED ? "ON" : "OFF"));
+			colorSensor.enableLed(newLED);
+			currentLED = newLED;
+		}
+
 
 
 		// If you press the game pad 'A' button, switch to automatic mode.
@@ -357,7 +323,7 @@ public class MitchLineFollow extends OpMode {
 		// If you press the game pad 'B' button, cancel auto mode and go back
 		// to standard driving.
 
-		checkGyro();
+		gyroReader.checkGyro();
 
 		switch (currentMode) {
 			default:
@@ -421,7 +387,7 @@ public class MitchLineFollow extends OpMode {
 		telemetry.addData("Color:", "A:" + colorSensor.alpha() + " R:" + colorSensor.red() + " G:" + colorSensor.green() + " B:" + colorSensor.blue());
 		telemetry.addData("OptDist", distanceSensor.getLightDetectedRaw());
 		telemetry.addData("baseline", blackBaseLine + (lineDetected ? " line" : " no line"));
-		telemetry.addData("heading", curHeading);
+		telemetry.addData("heading", gyroReader.getHeading());
 		telemetry.addData("encoders","Left:"+motorLeft.getCurrentPosition() + " right:"+motorRight.getCurrentPosition());
 
 	}
