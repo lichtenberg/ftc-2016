@@ -1,4 +1,5 @@
 
+
 package com.qualcomm.ftcrobotcontroller.opmodes;
 
 import com.qualcomm.ftccommon.DbgLog;
@@ -12,11 +13,7 @@ import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.Range;
 
 
-
-
-public class MitchAuto1 extends OpMode {
-
-	FtcConfig ftcConfig = new FtcConfig();
+public class MitchTeleop extends OpMode {
 
 	//
     // The member variables below represent the hardware features of the robot.
@@ -36,8 +33,8 @@ public class MitchAuto1 extends OpMode {
     // The member variables below are used for when we are executing a turn.
     //
 	int destHeading;
-	Boolean gyroTurnIsRunning = false;
     ModernGyroReader gyroReader;
+	Boolean gyroTurnIsRunning = false;
 
     //
     // The member variables below are used when we are following a line.
@@ -47,38 +44,37 @@ public class MitchAuto1 extends OpMode {
 	Boolean lineDetected = false;
 	Boolean lineFollowerIsRunning = false;
 
-
     //
     // The member variables below describe the drive train of the motor
     //
     double wheelDiameter = 2.75;     // Wheel diameter in inches
-    double gearReduction = 1.0;     // Amount of gear reduction in drive train
+    double gearReduction = 1.0;     // Amount of gear reduction in driver train
     double encoderCountsPerRevolution = 1120; // This is the number of encoder counts per turn of the output shaft
-
-	Boolean moveDistanceIsRunning = false;
+	boolean moveDistanceIsRunning = false;
 
     //
     // The member variables below are for holding the current "state" of our program.
     //
 
+    int currentMode = 0;
 
-	enum autoStep {
-		IDLE,
-		FORWARD_1,
-		TURN_1,
-		TURN_2,
-		FORWARD_2,
-		STOP
-	};
+	//
+	// Keep track of previous joystick button states.  We really need a better way
+	// to handle this.
+	//
 
-	autoStep currentStep = autoStep.IDLE;
+	Boolean prev_left_bumper = false;
+	Boolean prev_right_bumper = false;
+	Boolean prev_button_x = false;
+	Boolean prev_button_y = false;
+	Boolean prev_button_a = false;
+	Boolean prev_button_b = false;
 
 
-
-	/**
+    /**
 	 * Constructor
 	 */
-	public MitchAuto1() {
+	public MitchTeleop() {
 
 	}
 
@@ -94,8 +90,6 @@ public class MitchAuto1 extends OpMode {
 		 * that the names of the devices must match the names used when you
 		 * configured your robot and created the configuration file.
 		 */
-
-		ftcConfig.init(hardwareMap.appContext, this);
 		
 		/*
 		 *   Gather motors out of the hardware map.
@@ -148,26 +142,6 @@ public class MitchAuto1 extends OpMode {
 		return heading;
 	}
 
-
-	//
-	// subtractHeadings(a,b)
-	//
-	// Subtract two compass headings, returning the difference between them in degrees.
-	//
-	// This routine tries to be smart about the direction, so it will pick the smaller of
-	// the two differences (turning left 10 vs right 350).
-	//
-	private int subtractHeadings(int a,int b)
-	{
-		int difference;
-
-		difference = a - b;
-
-		if (difference > 180) return -(360 - difference);
-		if (difference <= -180) return (360 + difference);
-
-		return difference;
-	}
     //
     // inchesToEncoder(inches)
     //
@@ -196,17 +170,25 @@ public class MitchAuto1 extends OpMode {
         return (int) encoderCounts;
     }
 
+	//
+	// subtractHeadings(a,b)
+	//
+	// Subtract two compass headings, returning the difference between them in degrees.
+	//
+	// This routine tries to be smart about the direction, so it will pick the smaller of
+	// the two differences (turning left 10 vs right 350).
+	//
+	private int subtractHeadings(int a,int b)
+	{
+		int difference;
 
-	//
-	// The init_loop routine is called repeatedly in between the time you press the INIT
-	// button and the time you press the START button.
-	//
-	// For our example, we will read the optical distance (line follow) sensor
-	// and remember its maximum value.  This should be the color of the black
-	// carpet tiles, so that we can easily tell the difference between the black
-	// tile and the white line.
-	//
+		difference = a - b;
 
+		if (difference > 180) return -(360 - difference);
+		if (difference <= -180) return (360 + difference);
+
+		return difference;
+	}
 
 	@Override
 	public void init_loop()
@@ -216,55 +198,51 @@ public class MitchAuto1 extends OpMode {
 		// After the INIT button is pressed, this routine gets called over and over
         // in a loop.
 
-		ftcConfig.init_loop(hardwareMap.appContext, this);
-
-
 		rawSensorValue = distanceSensor.getLightDetectedRaw();
 		if (rawSensorValue > blackBaseLine) {
 			blackBaseLine = rawSensorValue;
 		}
 
-		//
-		// Add some telemetry.   The FTC forum says you should be able to read
-		// the joystick values here, but I have not been able to do so.
-		//
 		telemetry.addData("baseline", blackBaseLine );
 		telemetry.addData("buttons", (gamepad1.x ? "X" : "") + (gamepad1.y ? "Y" : ""));
         telemetry.addData("touch", touchSensor.isPressed() ? "Touch" : "no_touch");
-
-
-
-		//
-		// Keep reading the gyro all the time.
-		//
 
 		gyroReader.checkGyro();
 
 	}
 
-	//
-	// The start() method below is called when you press the triangle start button on the
-	// driver station.   This routine is called only once.
-	//
-
 	@Override
 	public void start()
 	{
-		// Erase all the telemetry data.
-
 		telemetry.clearData();
-
-
-		// Set the current autonomous step to our first step, FORWARD_1.
-
-		currentStep = autoStep.FORWARD_1;
 	}
 
 
 	//
-	// Although this example is for autonomous mode, when we reach the end this particular
-	// program lets you continue with teleop.  In a real competition, this would not be allowed.
+	// This routine cancels whatever we were doing before and forces us back to teleop mode.
+	// If we were executing an automatic turn, calling this method will put us back
+	// to regular teleop mode.
 	//
+	private void resetToTeleop()
+	{
+		motorLeft.setPower(0);
+		motorRight.setPower(0);
+
+		motorLeft.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
+		motorRight.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
+
+		gyroTurnIsRunning = false;
+		moveDistanceIsRunning = false;
+		lineFollowerIsRunning = false;
+
+		lineDetected = false;
+	}
+
+
+	//
+	// Basic teleop mode.   Use left and right joysticks for driver 1 to drive tank-style.
+	//
+
 	private void teleopMode()
 	{
 		float left = -gamepad1.left_stick_y;
@@ -286,7 +264,8 @@ public class MitchAuto1 extends OpMode {
 
 
 	//
-	// This is the line sensor follower step.
+	// This is the line sensor follower.
+	// As long as we're still following the line, this method will return TRUE..
 	//
 
 	private Boolean lineFollower()
@@ -457,67 +436,101 @@ public class MitchAuto1 extends OpMode {
 
 	}
 
-	//
-	// This is the main loop method.  Note that it's not really a loop,
-	// the loop() routine is called over and over by the Robot Controller main class
-	// You are supposed to decide what to do based on what you were doing before, and
-	// any inputs from the joysticks or sensors.
-	//
-	// Do not try to wait for things to happen in this routine, that will just make
-	// the runtime angry.
-	//
+
 
 	@Override
 	public void loop() {
 
+		Boolean button_x, button_y, button_a, button_b, left_bumper, right_bumper;
+
 
 		//
-		// We update the gyro's currentHeading each time the loop is called.
-		// It runs on its own, we query the current compass position by reading the
-		// latest value that checkGyro gets from the compass.
+		// Always keep poking at the gyro to keep our compass heading up to date.
 		//
 
 		gyroReader.checkGyro();
 
 		//
-		// Based on the current step in our autonomous program, decide what to do.
+		// Check joysticks for button pressed events.
+		// The way we do this is to see if the button is pressed now and wasn't pressed
+		// the last time the loop was run.
 		//
-		// Remember, each of the "steps" below is a routine that returns a Boolean result.
-		// a 'true' return means that the step has just started or is still running (so don't move onto the next step)
-		// a 'false' return means that the step has finished, and we can move onto the next step.
+		// The right way to handle this might be to separate this into its own class
+		// whose job is just to monitor for "pressed" buttons.
 		//
-		// This is a state machine, written (hopefully) simply enough to understand.
+		// If you check the button each time, you might do things more than once in the
+		// loop.
 		//
 
-		switch (currentStep) {
-			case IDLE:
-				break;
-			case FORWARD_1:
-				if (moveDistance(12.0, 0.3) == false) {
-					currentStep = autoStep.TURN_1;
-				}
-				break;
-			case TURN_1:
-				if (gyroTurn(90) == false) {
-					currentStep = autoStep.TURN_2;
-				}
-				break;
-			case TURN_2:
-				if (gyroTurn(-90) == false) {
-					currentStep = autoStep.FORWARD_2;
-				}
-				break;
-			case FORWARD_2:
-				if (moveDistance(12.0, 0.3) == false) {
-					currentStep = autoStep.STOP;
-				}
-				break;
-			case STOP:
-				teleopMode();
-				break;
+		button_x = gamepad1.x & !prev_button_x;
+		button_y = gamepad1.y & !prev_button_y;
+		button_a = gamepad1.a & !prev_button_a;
+		button_b = gamepad1.b & !prev_button_b;
+		left_bumper = gamepad1.left_bumper & !prev_left_bumper;
+		right_bumper = gamepad1.right_bumper & !prev_right_bumper;
 
+		prev_button_x = gamepad1.x;
+		prev_button_y = gamepad1.y;
+		prev_button_a = gamepad1.a;
+		prev_button_b = gamepad1.b;
+		prev_left_bumper = gamepad1.left_bumper;
+		prev_right_bumper = gamepad1.right_bumper;
+
+		//
+		// OK, based on what we were doing before, call the right
+		// routine.
+		//
+		// The subroutines here were taken from the autonomous example,
+		// but as you can see you can use them in teleop mode too.
+		// For example, you could have an automatic sequence in teleop mode
+		// to operate a grabber or other event that requires coordination
+		// between sensors and motors.
+		//
+		// Note that the parameters passed to moveDistance and gyroTurn
+		// don't really matter, since they are remembered on the *first* call
+		// (where we scan the buttons, see below).   We just call the
+		// methods over and over to keep the automatic operations going.
+		//
+		// We need to be careful not to allow the automatic steps to be happening
+		// all at the same time.
+		//
+
+		if (lineFollowerIsRunning) {
+			lineFollower();
+		} else if (moveDistanceIsRunning) {
+			moveDistance(12.0, 0.2);        // in reality the arguments don't matter here;
+		} else if (gyroTurnIsRunning) {
+			gyroTurn(90);                // in reality the arguments don't matter here
+		} else {
+			teleopMode();
 		}
 
+
+		// check the joystick buttons.   Each button has a function that
+		// starts an automatic procedure of some sort.
+		// The code below only is called when a button is first pressed - holding down the button
+		// does not cause the routine to be called multiple times.  This is important
+		// because once we start a turn, we don't want to start another until the first one
+		// has finished.
+
+		if (left_bumper) {
+			resetToTeleop();
+			gyroTurn(90);
+		} else if (right_bumper) {
+			resetToTeleop();
+			gyroTurn(-90);
+		} else if (button_x) {
+			resetToTeleop();
+		} else if (button_y) {
+			resetToTeleop();
+			moveDistance(12.0, 0.3);
+		} else if (button_a) {
+			resetToTeleop();
+			moveDistance(-12.0,0.3);
+		} else if (button_b) {
+			resetToTeleop();
+			lineFollower();
+		}
 
 
 		/*
@@ -525,26 +538,20 @@ public class MitchAuto1 extends OpMode {
 		 */
 
 		//telemetry.addData("Text", "*** Robot Data***");
-		//telemetry.addData("Time", String.format("%f", this.time));
-
+		telemetry.addData("Time", String.format("%f", this.time));
 		telemetry.addData("Color:", "A:" + colorSensor.alpha() + " R:" + colorSensor.red() + " G:" + colorSensor.green() + " B:" + colorSensor.blue());
 		telemetry.addData("OptDist", distanceSensor.getLightDetectedRaw());
 		telemetry.addData("baseline", blackBaseLine + (lineDetected ? " line" : " no line"));
 		telemetry.addData("heading", gyroReader.getHeading());
 		telemetry.addData("encoders","Left:"+motorLeft.getCurrentPosition() + " right:"+motorRight.getCurrentPosition());
-		telemetry.addData("step#",currentStep);
-
-		telemetry.addData("ColorIsRed", Boolean.toString(ftcConfig.param.colorIsRed));
-		telemetry.addData("DelayInSec", Integer.toString(ftcConfig.param.delayInSec));
-		telemetry.addData("AutonType", ftcConfig.param.autonType);
-
 
 	}
 
-	//
-	// This method is called when the OpMode is stopped.
-	//
-
+	/*
+	 * Code to run when the op mode is first disabled goes here
+	 * 
+	 * @see com.qualcomm.robotcore.eventloop.opmode.OpMode#stop()
+	 */
 	@Override
 	public void stop() {
 
