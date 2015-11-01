@@ -46,41 +46,51 @@ import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.ftcrobotcontroller.opmodes.ModernGyroReader;
 
 
-/**
- * TeleOp Mode
- * <p>
- * Enables control of the robot via the gamepad
- */
-
-
-
 
 public class MitchLineFollow extends OpMode {
 
-	/*
-	 * Note: the configuration of the servos is such that
-	 * as the arm servo approaches 0, the arm position moves up (away from the floor).
-	 * Also, as the claw servo approaches 0, the claw opens up (drops the game element).
-	 */
+	//
+    // The member variables below represent the hardware features of the robot.
+    // For each of these objects, we will retrieve information from the
+    // hardwareMap.   The hardwareMap is the list of devices that you
+    // named on the robot controller using the "settings" and "scan" functions
+    // of the robot controller app.
 
 	DcMotor motorRight;
 	DcMotor motorLeft;
 	ColorSensor colorSensor;
 	OpticalDistanceSensor distanceSensor;
 	I2cDevice gyro;
+
+    //
+    // The member variables below are used for when we are executing a turn.
+    //
 	int destHeading;
+    ModernGyroReader gyroReader;
 
-	ModernGyroReader gyroReader;
+    //
+    // The member variables below are used when we are following a line.
+    //
 
-	int blackBaseLine = 0;
-
+    int blackBaseLine = 0;
 	Boolean lineDetected = false;
 
-	int currentMode = 0;
 
-	Boolean currentLED = false;
+    //
+    // The member variables below describe the drive train of the motor
+    //
+    double wheelDiameter = 2.0;     // Wheel diameter in inches
+    double gearReduction = 1.0;     // Amount of gear reduction in driver train
+    double encoderCountsPerRevolution = 1120; // This is the number of encoder counts per turn of the output shaft
 
-	/**
+    //
+    // The member variables below are for holding the current "state" of our program.
+    //
+
+    int currentMode = 0;
+
+
+    /**
 	 * Constructor
 	 */
 	public MitchLineFollow() {
@@ -106,13 +116,27 @@ public class MitchLineFollow extends OpMode {
 		motorRight = hardwareMap.dcMotor.get("moto2");
 		motorLeft = hardwareMap.dcMotor.get("moto1");
 		motorRight.setDirection(DcMotor.Direction.REVERSE);
-		
+
+
+        /*
+         * Gather the sensors out of the hardware map.
+         */
 
 		colorSensor = hardwareMap.colorSensor.get("color1");
 		distanceSensor = hardwareMap.opticalDistanceSensor.get("dist1");
 
+        /*
+         * Set up our gyro.   To help with the gyro we take the I2C device
+         * and give it to our special ModernGyroReader class, which takes care
+         * of the dirty work of reading the heading out of the gyro.
+         */
+
 		gyro = hardwareMap.i2cDevice.get("gyro1");
 		gyroReader = new ModernGyroReader(gyro);
+
+        /*
+         * Set up the color sensor.
+         */
 
 		colorSensor.enableLed(true);
         
@@ -121,13 +145,47 @@ public class MitchLineFollow extends OpMode {
 	}
 
 
+    //
+    // normalizeHeading(heading)
+    //
+    // Force a heading to fit within the range 0..359.   For example,
+    // if the heading is 370 degrees, that's really the same as 10 degrees.
+    // If the heading is -10 degrees, that's really 350.
+    //
 	private int normalizeHeading(int heading)
 	{
 		while (heading < 0) heading += 360;
-		while (heading > 360) heading -= 360;
+		while (heading >= 360) heading -= 360;
 		return heading;
 	}
 
+    //
+    // inchesToEncoder(inches)
+    //
+    // Given some distance in inches, compute the amount that the encoders will change after the robot
+    // has moved that distance.
+    //
+    // To do this, we need the following info:
+    //    - The diameter of the wheel
+    //    - The ratio of the gears between the motor's output shaft and the wheel
+    //    - The number of encoder counts for each revolution of the output shaft.
+    //
+    // For example, suppose the wheel is 2" in diameter and the encoder counts 1120 pulses per revolution.
+    // Also, imagine that you have a 2:1 reduction using a chain or gears.
+    // This means that you need 1120 * 2 = 2240 pulses to rotate the wheel one turn.
+    // Since the wheel's diameter is 2", this means that the circumference is 2*pi = 6.28".
+    // If you want to move 12 inches, you would need the wheels to turn 1.91 times.
+    // 1.91 rotations is 1.91 * 1120 * 2 encoder counts = 4274.
+    //
+    private int inchesToEncoder(double inches)
+    {
+        double wheelCircumference = Math.PI * wheelDiameter;
+        double encoderCounts;
+
+        encoderCounts = wheelCircumference * encoderCountsPerRevolution * gearReduction;
+
+        return (int) encoderCounts;
+    }
 
 
 	private void startTurning(int howMuch)
@@ -141,10 +199,8 @@ public class MitchLineFollow extends OpMode {
 	{
 		int rawSensorValue;
 
-		// While the INIT button is being held down, sample the light sensor
-		// and remember the highest value we found.   This will be our
-		// baseline for 'black'.    Numbers significantly above
-		// this value will be 'white' (and represent the line).
+		// After the INIT button is pressed, this routine gets called over and over
+        // in a loop.
 
 		rawSensorValue = distanceSensor.getLightDetectedRaw();
 		if (rawSensorValue > blackBaseLine) {
@@ -282,16 +338,18 @@ public class MitchLineFollow extends OpMode {
 	}
 
 
-	public void moveALittle(Boolean backwards)
+	public void moveDistance(double distanceInInches, double motorPower)
 	{
+        int distanceInEncoderCounts = inchesToEncoder(distanceInInches);
+
 		motorLeft.setChannelMode(RunMode.RUN_TO_POSITION);
 		motorRight.setChannelMode(RunMode.RUN_TO_POSITION);
 
-		motorLeft.setTargetPosition(motorLeft.getCurrentPosition() + (backwards ? -2400 : 2400));
-		motorRight.setTargetPosition(motorRight.getCurrentPosition() + (backwards ? -2400 : 2400));
+		motorLeft.setTargetPosition(motorLeft.getCurrentPosition() + distanceInEncoderCounts);
+		motorRight.setTargetPosition(motorRight.getCurrentPosition() + distanceInEncoderCounts);
 
-		motorLeft.setPower(0.2);
-		motorRight.setPower(0.2);
+		motorLeft.setPower(motorPower);
+		motorRight.setPower(motorPower);
 
 		currentMode = 4;
 	}
@@ -302,18 +360,6 @@ public class MitchLineFollow extends OpMode {
 	 */
 	@Override
 	public void loop() {
-
-		Boolean newLED = currentLED;
-
-		if (gamepad1.dpad_up) newLED = true;
-		if (gamepad1.dpad_down) newLED = false;
-
-		if (newLED != currentLED) {
-			DbgLog.msg("Setting led to " + (newLED ? "ON" : "OFF"));
-			colorSensor.enableLed(newLED);
-			currentLED = newLED;
-		}
-
 
 
 		// If you press the game pad 'A' button, switch to automatic mode.
@@ -337,10 +383,10 @@ public class MitchLineFollow extends OpMode {
 				gyroTurnMode();
 				break;
 			case 3:
-				moveALittle(false);
+                moveDistance(12,0.2);
 				break;
 			case 5:
-				moveALittle(true);
+                moveDistance(-12,0.2);
 				break;
 			case 4:
 				if (!motorLeft.isBusy() && !motorRight.isBusy()) {

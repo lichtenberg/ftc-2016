@@ -52,8 +52,7 @@ public class Mitch1 extends OpMode {
 	DcMotor motorRight;
 	DcMotor motorLeft;
 
-	int leftMode = 0;
-	int rightMode = 0;
+	int currentMode;
 	Boolean prevLeftButton = false;
 	Boolean prevRightButton = false;
 
@@ -64,6 +63,42 @@ public class Mitch1 extends OpMode {
 
 	}
 
+
+	public void moveALittle(Boolean backwards)
+	{
+		motorLeft.setChannelMode(DcMotorController.RunMode.RUN_TO_POSITION);
+		motorRight.setChannelMode(DcMotorController.RunMode.RUN_TO_POSITION);
+
+		motorLeft.setTargetPosition(motorLeft.getCurrentPosition() + (backwards ? -2400 : 2400));
+		motorRight.setTargetPosition(motorRight.getCurrentPosition() + (backwards ? -2400 : 2400));
+
+		motorLeft.setPower(0.2);
+		motorRight.setPower(0.2);
+
+		currentMode = 4;
+	}
+
+	public void teleopMode()
+	{
+		float left = gamepad1.left_stick_y;
+		float right = gamepad1.right_stick_y;
+
+
+		// clip the right/left values so that the values never exceed +/- 1
+		right = Range.clip(right, -1, 1);
+		left = Range.clip(left, -1, 1);
+
+		// scale the joystick value to make it easier to control
+		// the robot more precisely at slower speeds.
+		right = (float)scaleInput(right);
+		left =  (float)scaleInput(left);
+
+		// write the values to the motors
+		motorRight.setPower(right);
+		motorLeft.setPower(left);
+
+
+	}
 	/*
 	 * Code to run when the op mode is first enabled goes here
 	 * 
@@ -79,18 +114,9 @@ public class Mitch1 extends OpMode {
 		 * configured your robot and created the configuration file.
 		 */
 		
-		/*
-		 * For the demo Tetrix K9 bot we assume the following,
-		 *   There are two motors "motor_1" and "motor_2"
-		 *   "motor_1" is on the right side of the bot.
-		 *   "motor_2" is on the left side of the bot and reversed.
-		 *   
-		 * We also assume that there are two servos "servo_1" and "servo_6"
-		 *    "servo_1" controls the arm joint of the manipulator.
-		 *    "servo_6" controls the claw joint of the manipulator.
-		 */
-		motorRight = hardwareMap.dcMotor.get("motor_2");
-		motorLeft = hardwareMap.dcMotor.get("motor_1");
+
+		motorRight = hardwareMap.dcMotor.get("moto2");
+		motorLeft = hardwareMap.dcMotor.get("moto1");
 		//motorLeft.setDirection(DcMotor.Direction.REVERSE);
 
 
@@ -106,56 +132,26 @@ public class Mitch1 extends OpMode {
 	@Override
 	public void loop() {
 
-		/*
-		 * Gamepad 1
-		 * 
-		 * Gamepad 1 controls the motors via the left stick, and it controls the
-		 * wrist/claw via the a,b, x, y buttons
-		 */
 
-		// throttle: left_stick_y ranges from -1 to 1, where -1 is full up, and
-		// 1 is full down
-		// direction: left_stick_x ranges from -1 to 1, where -1 is full left
-		// and 1 is full right
-		float left = gamepad1.left_stick_y;
-		float right = gamepad1.right_stick_y;
+		if (gamepad1.x) currentMode = 0;
+		else if (gamepad1.y) currentMode = 1;
 
-		if (gamepad1.left_bumper != prevLeftButton) {
-			prevLeftButton = gamepad1.left_bumper;
 
-			if (gamepad1.left_bumper) {
-				leftMode++;
-				if (leftMode == 3) leftMode = 0;
-				motorLeft.setChannelMode(DcMotorController.RunMode.values()[leftMode]);
-			}
+		switch (currentMode) {
+			case 0:
+			default:
+				teleopMode();
+				break;
+			case 1:
+				moveALittle(true);
+				break;
+			case 4:
+				if (!motorLeft.isBusy() && !motorRight.isBusy()) {
+					motorLeft.setPower(0);
+					motorRight.setPower(0);
+					currentMode = 0;
+				}
 		}
-
-		if (gamepad1.right_bumper != prevRightButton) {
-			prevRightButton = gamepad1.right_bumper;
-
-			if (gamepad1.right_bumper) {
-				rightMode++;
-				if (rightMode == 3) rightMode = 0;
-				motorRight.setChannelMode(DcMotorController.RunMode.values()[rightMode]);
-			}
-		}
-
-
-
-		// clip the right/left values so that the values never exceed +/- 1
-		right = Range.clip(right, -1, 1);
-		left = Range.clip(left, -1, 1);
-
-		// scale the joystick value to make it easier to control
-		// the robot more precisely at slower speeds.
-		right = (float)scaleInput(right);
-		left =  (float)scaleInput(left);
-		
-		// write the values to the motors
-		motorRight.setPower(right);
-		motorLeft.setPower(left);
-
-
 
 
 		/*
@@ -164,10 +160,9 @@ public class Mitch1 extends OpMode {
 		 * will return a null value. The legacy NXT-compatible motor controllers
 		 * are currently write only.
 		 */
-        telemetry.addData("Text", "*** Robot Data***");
-        telemetry.addData("left tgt pwr",  "left  pwr: " + String.format("%.2f", left));
-        telemetry.addData("right tgt pwr", "right pwr: " + String.format("%.2f", right));
-		telemetry.addData("Modes","left " + String.format("%d",leftMode) + " right " + String.format("%d",rightMode));
+        telemetry.addData("Encoders",  "left "+motorLeft.getCurrentPosition() +" right " + motorRight.getCurrentPosition());
+		telemetry.addData("Busy","left " + (motorLeft.isBusy() ? "BUSY" : "IDLE") + " right " + (motorRight.isBusy() ? "BUSY" : "IDLE"));
+		telemetry.addData("Mode",currentMode);
 
 	}
 
