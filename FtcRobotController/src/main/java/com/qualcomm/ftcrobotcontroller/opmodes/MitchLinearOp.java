@@ -1,25 +1,49 @@
+/* Copyright (c) 2014 Qualcomm Technologies Inc
 
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted (subject to the limitations in the disclaimer below) provided that
+the following conditions are met:
+
+Redistributions of source code must retain the above copyright notice, this list
+of conditions and the following disclaimer.
+
+Redistributions in binary form must reproduce the above copyright notice, this
+list of conditions and the following disclaimer in the documentation and/or
+other materials provided with the distribution.
+
+Neither the name of Qualcomm Technologies Inc nor the names of its contributors
+may be used to endorse or promote products derived from this software without
+specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS
+LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
 package com.qualcomm.ftcrobotcontroller.opmodes;
 
-import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.ftccommon.DbgLog;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.ColorSensor;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorController.RunMode;
+import com.qualcomm.robotcore.hardware.I2cDevice;
 import com.qualcomm.robotcore.hardware.OpticalDistanceSensor;
 import com.qualcomm.robotcore.hardware.TouchSensor;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.I2cDevice;
-import com.qualcomm.robotcore.hardware.I2cController;
-import com.qualcomm.ftccommon.DbgLog;
-
-import com.qualcomm.robotcore.hardware.DcMotorController.RunMode;
-import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
-import com.qualcomm.ftcrobotcontroller.opmodes.ModernGyroReader;
 
+public class MitchLinearOp extends LinearOpMode {
 
-
-public class MitchLineFollow extends OpMode {
 
 	//
     // The member variables below represent the hardware features of the robot.
@@ -52,7 +76,7 @@ public class MitchLineFollow extends OpMode {
     //
     // The member variables below describe the drive train of the motor
     //
-    double wheelDiameter = 2.75;     // Wheel diameter in inches
+    double wheelDiameter = 2.0;     // Wheel diameter in inches
     double gearReduction = 1.0;     // Amount of gear reduction in driver train
     double encoderCountsPerRevolution = 1120; // This is the number of encoder counts per turn of the output shaft
 
@@ -66,7 +90,7 @@ public class MitchLineFollow extends OpMode {
     /**
 	 * Constructor
 	 */
-	public MitchLineFollow() {
+	public MitchLinearOp() {
 
 	}
 
@@ -75,49 +99,7 @@ public class MitchLineFollow extends OpMode {
 	 * 
 	 * @see com.qualcomm.robotcore.eventloop.opmode.OpMode#start()
 	 */
-	@Override
-	public void init() {
-		/*
-		 * Use the hardwareMap to get the dc motors and servos by name. Note
-		 * that the names of the devices must match the names used when you
-		 * configured your robot and created the configuration file.
-		 */
-		
-		/*
-		 *   Gather motors out of the hardware map.
-		 */
-		motorRight = hardwareMap.dcMotor.get("moto2");
-		motorLeft = hardwareMap.dcMotor.get("moto1");
-		motorRight.setDirection(DcMotor.Direction.REVERSE);
 
-
-        /*
-         * Gather the sensors out of the hardware map.
-         */
-
-		colorSensor = hardwareMap.colorSensor.get("color1");
-		distanceSensor = hardwareMap.opticalDistanceSensor.get("dist1");
-
-        /*
-         * Set up our gyro.   To help with the gyro we take the I2C device
-         * and give it to our special ModernGyroReader class, which takes care
-         * of the dirty work of reading the heading out of the gyro.
-         */
-
-		gyro = hardwareMap.i2cDevice.get("gyro1");
-		gyroReader = new ModernGyroReader(gyro);
-
-
-        touchSensor = hardwareMap.touchSensor.get("touch1");
-
-        /*
-         * Set up the color sensor.
-         */
-
-		colorSensor.enableLed(true);
-
-
-	}
 
 
     //
@@ -157,7 +139,7 @@ public class MitchLineFollow extends OpMode {
         double wheelCircumference = Math.PI * wheelDiameter;
         double encoderCounts;
 
-        encoderCounts = (inches / wheelCircumference) * (encoderCountsPerRevolution * gearReduction);
+		encoderCounts = (inches / wheelCircumference) * (encoderCountsPerRevolution * gearReduction);
 
         return (int) encoderCounts;
     }
@@ -169,32 +151,7 @@ public class MitchLineFollow extends OpMode {
 		currentMode = 2;
 	}
 
-	@Override
-	public void init_loop()
-	{
-		int rawSensorValue;
 
-		// After the INIT button is pressed, this routine gets called over and over
-        // in a loop.
-
-		rawSensorValue = distanceSensor.getLightDetectedRaw();
-		if (rawSensorValue > blackBaseLine) {
-			blackBaseLine = rawSensorValue;
-		}
-
-		telemetry.addData("baseline", blackBaseLine );
-		telemetry.addData("buttons", (gamepad1.x ? "X" : "") + (gamepad1.y ? "Y" : ""));
-        telemetry.addData("touch", touchSensor.isPressed() ? "Touch" : "no_touch");
-
-		gyroReader.checkGyro();
-
-	}
-
-	@Override
-	public void start()
-	{
-		telemetry.clearData();
-	}
 
 
 	private void teleopMode()
@@ -274,13 +231,9 @@ public class MitchLineFollow extends OpMode {
 	{
 		int curHeading = gyroReader.getHeading();
 
-		int degreesToTurn = subtractHeadings(destHeading, curHeading);
+		int degreesToTurn = subtractHeadings(destHeading,curHeading);
 		Boolean shouldTurnLeft;
-		//double turnSpeed = 0.10;
-        //double slowTurnSpeed = 0.04;
-
-        double turnSpeed = 0.20;
-        double slowTurnSpeed = 0.10;
+		double turnSpeed = 0.10;
 
 		if (degreesToTurn > 0) {
 			shouldTurnLeft = true;
@@ -294,7 +247,7 @@ public class MitchLineFollow extends OpMode {
 		DbgLog.msg("TURN: myHeading:" + curHeading + " dest " + (destHeading) + " left:" + degreesToTurn + (shouldTurnLeft ? " LEFT" : " RIGHT"));
 
 		if (Math.abs(degreesToTurn) <= 20) {
-			turnSpeed = slowTurnSpeed;
+			turnSpeed = 0.04;
 		}
 
 		if (Math.abs(degreesToTurn) <= 1) {
@@ -335,9 +288,72 @@ public class MitchLineFollow extends OpMode {
 	 * 
 	 * @see com.qualcomm.robotcore.eventloop.opmode.OpMode#run()
 	 */
-	@Override
-	public void loop() {
 
+
+	@Override
+	public void runOpMode() {
+		/*
+		 * Use the hardwareMap to get the dc motors and servos by name. Note
+		 * that the names of the devices must match the names used when you
+		 * configured your robot and created the configuration file.
+		 */
+
+		/*
+		 *   Gather motors out of the hardware map.
+		 */
+		motorRight = hardwareMap.dcMotor.get("moto2");
+		motorLeft = hardwareMap.dcMotor.get("moto1");
+		motorRight.setDirection(DcMotor.Direction.REVERSE);
+
+
+        /*
+         * Gather the sensors out of the hardware map.
+         */
+
+		colorSensor = hardwareMap.colorSensor.get("color1");
+		distanceSensor = hardwareMap.opticalDistanceSensor.get("dist1");
+
+        /*
+         * Set up our gyro.   To help with the gyro we take the I2C device
+         * and give it to our special ModernGyroReader class, which takes care
+         * of the dirty work of reading the heading out of the gyro.
+         */
+
+		gyro = hardwareMap.i2cDevice.get("gyro1");
+		gyroReader = new ModernGyroReader(gyro);
+
+
+		touchSensor = hardwareMap.touchSensor.get("touch1");
+
+        /*
+         * Set up the color sensor.
+         */
+
+		colorSensor.enableLed(true);
+
+
+		int rawSensorValue;
+
+		// After the INIT button is pressed, this routine gets called over and over
+		// in a loop.
+
+		rawSensorValue = distanceSensor.getLightDetectedRaw();
+		if (rawSensorValue > blackBaseLine) {
+			blackBaseLine = rawSensorValue;
+		}
+
+		telemetry.addData("baseline", blackBaseLine );
+		telemetry.addData("buttons", (gamepad1.x ? "X" : "") + (gamepad1.y ? "Y" : ""));
+		telemetry.addData("touch", touchSensor.isPressed() ? "Touch" : "no_touch");
+
+		gyroReader.checkGyro();
+
+
+		try {
+			waitForStart();
+		} catch (InterruptedException e) {
+			return;
+		}
 
 		// If you press the game pad 'A' button, switch to automatic mode.
 		// Drive forward at 0.25 until we hit the line, then start following the
@@ -346,84 +362,85 @@ public class MitchLineFollow extends OpMode {
 		// If you press the game pad 'B' button, cancel auto mode and go back
 		// to standard driving.
 
-		gyroReader.checkGyro();
+		while (true) {
 
-		switch (currentMode) {
-			default:
-			case 0:
-				teleopMode();
-				break;
-			case 1:
-				lineFollowMode();
-				break;
-			case 2:
-				gyroTurnMode();
-				break;
-			case 3:
-                moveDistance(12,0.2);
-				break;
-			case 5:
-                moveDistance(-12,0.2);
-				break;
-			case 4:
-				if (!motorLeft.isBusy() && !motorRight.isBusy()) {
-					motorLeft.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
-					motorRight.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
-					motorLeft.setPower(0);
-					motorRight.setPower(0);
-					currentMode = 0;
-					DbgLog.msg("DONE WITH ENCODER RUN");
-				} else {
-					DbgLog.msg("WAITING FOR ENCODER RUN");
-				}
-		}
+			try {
+				waitForNextHardwareCycle();
+			} catch (InterruptedException e) {
+				return;
+			}
 
-		if (gamepad1.a && (currentMode != 0)) {
-			lineDetected = false;
-			motorLeft.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
-			motorRight.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
+			gyroReader.checkGyro();
 
-			currentMode = 0;
-		}
-		else if (gamepad1.b && (currentMode != 1)) {
-			lineDetected = false;
-			currentMode = 1;
-		} else if (gamepad1.x && (currentMode != 2)) {
-			startTurning(90);
-			DbgLog.msg("STARTING TURN");
-		} else if (gamepad1.y && (currentMode != 2)) {
-			startTurning(-90);
-			DbgLog.msg("STARTING TURN");
-		} else if (gamepad1.left_bumper) {
-			currentMode = 3;
-		} else if (gamepad1.right_bumper) {
-			currentMode = 5;
-		}
+			switch (currentMode) {
+				default:
+				case 0:
+					teleopMode();
+					break;
+				case 1:
+					lineFollowMode();
+					break;
+				case 2:
+					gyroTurnMode();
+					break;
+				case 3:
+					moveDistance(12, 0.2);
+					break;
+				case 5:
+					moveDistance(-12, 0.2);
+					break;
+				case 4:
+					if (!motorLeft.isBusy() && !motorRight.isBusy()) {
+						motorLeft.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
+						motorRight.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
+						motorLeft.setPower(0);
+						motorRight.setPower(0);
+						currentMode = 0;
+						DbgLog.msg("DONE WITH ENCODER RUN");
+					} else {
+						DbgLog.msg("WAITING FOR ENCODER RUN");
+					}
+			}
+
+			if (gamepad1.a && (currentMode != 0)) {
+				lineDetected = false;
+				motorLeft.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
+				motorRight.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
+
+				currentMode = 0;
+			} else if (gamepad1.b && (currentMode != 1)) {
+				lineDetected = false;
+				currentMode = 1;
+			} else if (gamepad1.x && (currentMode != 2)) {
+				startTurning(90);
+				DbgLog.msg("STARTING TURN");
+			} else if (gamepad1.y && (currentMode != 2)) {
+				startTurning(-90);
+				DbgLog.msg("STARTING TURN");
+			} else if (gamepad1.left_bumper) {
+				currentMode = 3;
+			} else if (gamepad1.right_bumper) {
+				currentMode = 5;
+			}
 
 
 		/*
 		 * Send telemetry data back to driver station.
 		 */
 
-		//telemetry.addData("Text", "*** Robot Data***");
-		telemetry.addData("Time", String.format("%f", this.time));
-		telemetry.addData("Color:", "A:" + colorSensor.alpha() + " R:" + colorSensor.red() + " G:" + colorSensor.green() + " B:" + colorSensor.blue());
-		telemetry.addData("OptDist", distanceSensor.getLightDetectedRaw());
-		telemetry.addData("baseline", blackBaseLine + (lineDetected ? " line" : " no line"));
-		telemetry.addData("heading", gyroReader.getHeading());
-		telemetry.addData("encoders","Left:"+motorLeft.getCurrentPosition() + " right:"+motorRight.getCurrentPosition());
+			//telemetry.addData("Text", "*** Robot Data***");
+			telemetry.addData("Time", String.format("%f", this.time));
+			telemetry.addData("Color:", "A:" + colorSensor.alpha() + " R:" + colorSensor.red() + " G:" + colorSensor.green() + " B:" + colorSensor.blue());
+			telemetry.addData("OptDist", distanceSensor.getLightDetectedRaw());
+			telemetry.addData("baseline", blackBaseLine + (lineDetected ? " line" : " no line"));
+			telemetry.addData("heading", gyroReader.getHeading());
+			telemetry.addData("encoders", "Left:" + motorLeft.getCurrentPosition() + " right:" + motorRight.getCurrentPosition());
+
+		}
 
 	}
 
-	/*
-	 * Code to run when the op mode is first disabled goes here
-	 * 
-	 * @see com.qualcomm.robotcore.eventloop.opmode.OpMode#stop()
-	 */
-	@Override
-	public void stop() {
 
-	}
 	
 	/*
 	 * This method scales the joystick input so for low joystick values, the 
