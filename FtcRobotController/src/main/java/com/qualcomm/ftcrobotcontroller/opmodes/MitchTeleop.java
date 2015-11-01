@@ -215,6 +215,11 @@ public class MitchTeleop extends OpMode {
 	public void start()
 	{
 		telemetry.clearData();
+
+		// The start time begins at INIT.  Since we're going to auto-stop at the end of the
+		// teleop phase, we'll reset the time here.
+
+		resetStartTime();
 	}
 
 
@@ -443,6 +448,15 @@ public class MitchTeleop extends OpMode {
 
 		Boolean button_x, button_y, button_a, button_b, left_bumper, right_bumper;
 
+		//
+		// Force us to stop if we are overtime.
+		//
+
+		if (time > 120) {
+			stop();
+			return;
+		}
+
 
 		//
 		// Always keep poking at the gyro to keep our compass heading up to date.
@@ -554,7 +568,8 @@ public class MitchTeleop extends OpMode {
 	 */
 	@Override
 	public void stop() {
-
+		motorLeft.setPower(0);
+		motorRight.setPower(0);
 	}
 	
 	/*
