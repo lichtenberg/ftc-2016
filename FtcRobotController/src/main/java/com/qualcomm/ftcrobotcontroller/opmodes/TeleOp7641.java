@@ -41,7 +41,7 @@ import com.qualcomm.robotcore.util.Range;
  * <p>
  * Enables control of the robot via the gamepad
  */
-public class K9TankDrive extends OpMode {
+public class TeleOp7641 extends OpMode {
 
 	/*
 	 * Note: the configuration of the servos is such that
@@ -75,7 +75,7 @@ public class K9TankDrive extends OpMode {
 	/**
 	 * Constructor
 	 */
-	public K9TankDrive() {
+	public TeleOp7641() {
 
 	}
 
