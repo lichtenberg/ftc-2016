@@ -63,6 +63,7 @@ public class FtcOpModeRegister implements OpModeRegister {
     manager.register("MitchAuto1",MitchAuto1.class);
     manager.register("MitchLineFollow",MitchLineFollow.class);
     manager.register("MitchLinearOp",MitchLinearOp.class);
+	manager.register("7641 Main TeleOp",TeleOp7641.class);
     //manager.register("MitchAuto",MitchAuto.class);
 
     //manager.register("K9TeleOp", K9TeleOp.class);
@@ -79,7 +80,7 @@ public class FtcOpModeRegister implements OpModeRegister {
 
     //manager.register("IrSeekerOp", IrSeekerOp.class);
     //manager.register("CompassCalibration", CompassCalibration.class);
-    //manager.register("I2cAddressChangeExample", LinearI2cAddressChange.class);
+    //manager.register("I2cAddressChangeExample", LinearcI2cAddressChange.class);
 
 
     //manager.register("NxtTeleOp", NxtTeleOp.class);
