@@ -46,6 +46,7 @@ public class MitchAuto1 extends OpMode {
     int blackBaseLine = 0;
 	Boolean lineDetected = false;
 	Boolean lineFollowerIsRunning = false;
+	double lineStartTime = 0;
 
 
     //
@@ -69,6 +70,8 @@ public class MitchAuto1 extends OpMode {
 		TURN_1,
 		TURN_2,
 		FORWARD_2,
+		LINEFOLLOW,
+		REVERSE_1,
 		STOP
 	};
 
@@ -337,7 +340,7 @@ public class MitchAuto1 extends OpMode {
 			// just in case we miss the line entirely and slam into the wall.
 			//
 
-			if (touchSensor.isPressed()) {
+			if (touchSensor.isPressed() || (time > (lineStartTime + 10))) {
 				DbgLog.msg("LINE_FOLLOW:  touch sensor activated, stopping");
 
 				motorLeft.setPower(0);
@@ -347,6 +350,7 @@ public class MitchAuto1 extends OpMode {
 
 		} else {
 			lineFollowerIsRunning = true;
+			lineStartTime = time;
 		}
 
 		return lineFollowerIsRunning;
@@ -373,8 +377,8 @@ public class MitchAuto1 extends OpMode {
 			//double turnSpeed = 0.10;
 			//double slowTurnSpeed = 0.04;
 
-			double turnSpeed = 0.20;
-			double slowTurnSpeed = 0.10;
+			double turnSpeed = 0.15;
+			double slowTurnSpeed = 0.08;
 
 			if (degreesToTurn > 0) {
 				shouldTurnLeft = true;
@@ -485,6 +489,8 @@ public class MitchAuto1 extends OpMode {
 
 		gyroReader.checkGyro();
 
+		int turn = (ftcConfig.param.colorIsRed ? -45 : 45);
+
 		//
 		// Based on the current step in our autonomous program, decide what to do.
 		//
@@ -499,13 +505,13 @@ public class MitchAuto1 extends OpMode {
 			case IDLE:
 				break;
 			case FORWARD_1:
-				if (moveDistance(12.0, 0.3) == false) {
+				if (moveDistance(6, 0.3) == false) {
 					currentStep = autoStep.TURN_1;
 				}
 				break;
 			case TURN_1:
-				if (gyroTurn(90) == false) {
-					currentStep = autoStep.TURN_2;
+				if (gyroTurn(turn) == false) {
+					currentStep = autoStep.FORWARD_2;
 				}
 				break;
 			case TURN_2:
@@ -514,10 +520,19 @@ public class MitchAuto1 extends OpMode {
 				}
 				break;
 			case FORWARD_2:
-				if (moveDistance(12.0, 0.3) == false) {
-					currentStep = autoStep.STOP;
+				if (moveDistance(6*12, 0.5) == false) {
+					currentStep = autoStep.LINEFOLLOW;
 				}
 				break;
+			case LINEFOLLOW:
+				if (lineFollower() == false) {
+					currentStep = autoStep.REVERSE_1;
+				}
+				break;
+			case REVERSE_1:
+				if (moveDistance(-12, 0.3) == false) {
+					currentStep = autoStep.STOP;
+				}
 			case STOP:
 				teleopMode();
 				break;
