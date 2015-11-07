@@ -65,14 +65,13 @@ public class TeleOp7641 extends OpMode {
 		 * that the names of the devices must match the names used when you
 		 * configured your robot and created the configuration file.
 		 */
-
-		 */
 		motorRightPrimary = hardwareMap.dcMotor.get("motor-1");
 		motorLeftPrimary = hardwareMap.dcMotor.get("motor-2");
 		motorRightSecondary = hardwareMap.dcMotor.get("motor-3");
 		motorLeftSecondary = hardwareMap.dcMotor.get("motor-4");
-		motorLeftPrimary.setDirection(DcMotor.Direction.REVERSE);
-		motorLeftSecondary.setDirection(DcMotor.Direction.REVERSE);
+// WARNING: Ugly motor direction fix ahead
+        motorRightPrimary.setDirection(DcMotor.Direction.REVERSE);
+        motorLeftSecondary.setDirection(DcMotor.Direction.REVERSE);
 
 	}
 
