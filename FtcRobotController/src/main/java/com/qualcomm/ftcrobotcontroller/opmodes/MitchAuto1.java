@@ -56,6 +56,7 @@ public class MitchAuto1 extends OpMode {
     double encoderCountsPerRevolution = 1120; // This is the number of encoder counts per turn of the output shaft
 
 	Boolean moveDistanceIsRunning = false;
+	int moveDistanceDelay = 0;
 
     //
     // The member variables below are for holding the current "state" of our program.
@@ -254,6 +255,8 @@ public class MitchAuto1 extends OpMode {
 
 		telemetry.clearData();
 
+		motorLeft.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
+		motorRight.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
 
 		// Set the current autonomous step to our first step, FORWARD_1.
 
@@ -425,7 +428,8 @@ public class MitchAuto1 extends OpMode {
 		// The return value of this routine is 'true' if we are still busy.
 
 		if (moveDistanceIsRunning) {
-			if (!motorLeft.isBusy() && motorRight.isBusy()) {
+			moveDistanceDelay++;
+			if ((moveDistanceDelay > 50) && !motorLeft.isBusy() && !motorRight.isBusy()) {
 				motorLeft.setPower(0);
 				motorRight.setPower(0);
 				motorLeft.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
@@ -450,6 +454,8 @@ public class MitchAuto1 extends OpMode {
 			motorLeft.setPower(motorPower);
 			motorRight.setPower(motorPower);
 
+
+			moveDistanceDelay = 0;
 			moveDistanceIsRunning = true;
 		}
 
