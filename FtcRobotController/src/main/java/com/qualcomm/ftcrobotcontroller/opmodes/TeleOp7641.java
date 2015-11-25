@@ -1,7 +1,8 @@
 /**
- * 7641 Main Telemetry Operation Code
+ * 7641 Main TeleOperation Code
  *
- *"Do you feel like a plastic bag, floating though the wind, wanting to start anew?"
+ *
+ *"
 **/
 package com.qualcomm.ftcrobotcontroller.opmodes;
 
@@ -15,7 +16,7 @@ import com.qualcomm.robotcore.util.Range;
  * <p>
  * Enables control of the robot via the gamepad
  */
-public class TeleOp7641 extends OpMode {
+public class TeleOp7641 extends OpMode{
 
 	/*
 	 * Note: the configuration of the servos is such that
@@ -94,6 +95,7 @@ public class TeleOp7641 extends OpMode {
         // note that if y equal -1 then joystick is pushed all of the way forward.
         float left = -gamepad1.left_stick_y;
         float right = -gamepad1.right_stick_y;
+        boolean ybutton = gamepad1.y;
 
         // clip the right/left values so that the values never exceed +/- 1
         right = Range.clip(right, -1, 1);
@@ -112,6 +114,13 @@ public class TeleOp7641 extends OpMode {
         float encoder = motorRightPrimary.getCurrentPosition();
 
 
+        // On y button push, start back wheel motors at 100% speed to get over churro bars
+        if (ybutton == true) {
+            motorRightPrimary.setPower(1.00);
+            motorLeftPrimary.setPower(1.00);
+        }
+
+
 
 		/*
 		 * Send telemetry data back to driver station. Note that if we are using
@@ -119,8 +128,7 @@ public class TeleOp7641 extends OpMode {
 		 * will return a null value. The legacy NXT-compatible motor controllers
 		 * are currently write only.
 		 */
-        telemetry.addData("Text", "*** Robot Data***");
-        telemetry.addData("distance", "Revolutions: " + Double.toString(encoder * 2240));
+        telemetry.addData("distance", "Revolutions: " + encoder*2240);
 
     }
 
