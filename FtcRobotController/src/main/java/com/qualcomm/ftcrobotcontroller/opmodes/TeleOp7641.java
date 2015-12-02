@@ -95,8 +95,6 @@ public class TeleOp7641 extends OpMode{
         // note that if y equal -1 then joystick is pushed all of the way forward.
         float left = -gamepad1.left_stick_y;
         float right = -gamepad1.right_stick_y;
-        boolean ybutton = gamepad1.y;
-
         // clip the right/left values so that the values never exceed +/- 1
         right = Range.clip(right, -1, 1);
         left = Range.clip(left, -1, 1);
@@ -105,7 +103,6 @@ public class TeleOp7641 extends OpMode{
         // the robot more precisely at slower speeds.
         right = (float) scaleInput(right);
         left = (float) scaleInput(left);
-
         // write the values to the motors
         motorRightPrimary.setPower(right);
         motorLeftPrimary.setPower(left);
@@ -113,13 +110,44 @@ public class TeleOp7641 extends OpMode{
         motorLeftSecondary.setPower(left);
         float encoder = motorRightPrimary.getCurrentPosition();
 
+		//--------------------------------------------------------------------
+		// Driver Control Features
+		//--------------------------------------------------------------------
 
-        // On y button push, start back wheel motors at 100% speed to get over churro bars
-        if (ybutton == true) {
-            motorRightPrimary.setPower(1.00);
-            motorLeftPrimary.setPower(1.00);
+        double variablespeed = 1.00;
+
+        //Add limits to variable speed
+        if (variablespeed > 1) {
+            variablespeed = 1;
+        }
+        if (variablespeed < 0.20 ) {
+            variablespeed = 0.20;
         }
 
+        //Make it so gamepad up and down add to or decrease variablespeed
+
+        if (gamepad1.dpad_up == true) {
+            variablespeed = variablespeed + 0.20;
+        }
+        if (gamepad1.dpad_down == true) {
+            variablespeed = variablespeed - 0.20;
+        }
+
+        // On left bumper push, turn left
+        if (gamepad1.left_bumper == true) {
+            motorRightPrimary.setPower(variablespeed);
+            motorRightSecondary.setPower(variablespeed);
+			motorLeftPrimary.setPower(-variablespeed);
+			motorLeftSecondary.setPower(-variablespeed);
+        }
+
+		// On right bumper push, turn right
+		if (gamepad1.right_bumper == true) {
+			motorRightPrimary.setPower(-variablespeed);
+			motorRightSecondary.setPower(-variablespeed);
+			motorLeftPrimary.setPower(variablespeed);
+			motorLeftSecondary.setPower(variablespeed);
+		}
 
 
 		/*
