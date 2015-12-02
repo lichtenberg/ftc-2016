@@ -155,7 +155,8 @@ public class TeleOp7641 extends OpMode{
 		 * will return a null value. The legacy NXT-compatible motor controllers
 		 * are currently write only.
 		 */
-        telemetry.addData("distance", "Distance (inches): " + encoder*2240*6*3.14);
+        telemetry.addData("distance", "Distance (inches): " + String.format("%.2f", encoder*2240*6*3.14));
+        telemetry.addData("variableSpeed", "Variable Speed Setting: " + String.format("%.2f", variableSpeed));
 
     }
 
