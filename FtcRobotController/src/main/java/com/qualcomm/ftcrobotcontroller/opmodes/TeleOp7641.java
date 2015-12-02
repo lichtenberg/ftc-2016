@@ -45,7 +45,8 @@ public class TeleOp7641 extends OpMode{
 	DcMotor motorRightSecondary;
 	DcMotor motorLeftPrimary;
 	DcMotor motorLeftSecondary;
-
+    double variableSpeed = 1.00 ;
+    float encoder = motorRightPrimary.getCurrentPosition();
 
 	/**
 	 * Constructor
@@ -108,45 +109,43 @@ public class TeleOp7641 extends OpMode{
         motorLeftPrimary.setPower(left);
         motorRightSecondary.setPower(right);
         motorLeftSecondary.setPower(left);
-        float encoder = motorRightPrimary.getCurrentPosition();
 
 		//--------------------------------------------------------------------
 		// Driver Control Features
 		//--------------------------------------------------------------------
 
-        double variablespeed = 1.00;
 
         //Add limits to variable speed
-        if (variablespeed > 1) {
-            variablespeed = 1;
+        if (variableSpeed > 1) {
+            variableSpeed = 1;
         }
-        if (variablespeed < 0.20 ) {
-            variablespeed = 0.20;
+        if (variableSpeed < 0.20 ) {
+            variableSpeed = 0.20;
         }
 
         //Make it so gamepad up and down add to or decrease variablespeed
 
         if (gamepad1.dpad_up == true) {
-            variablespeed = variablespeed + 0.20;
+            variableSpeed = variableSpeed + 0.20;
         }
         if (gamepad1.dpad_down == true) {
-            variablespeed = variablespeed - 0.20;
+            variableSpeed = variableSpeed - 0.20;
         }
 
         // On left bumper push, turn left
         if (gamepad1.left_bumper == true) {
-            motorRightPrimary.setPower(variablespeed);
-            motorRightSecondary.setPower(variablespeed);
-			motorLeftPrimary.setPower(-variablespeed);
-			motorLeftSecondary.setPower(-variablespeed);
+            motorRightPrimary.setPower(variableSpeed);
+            motorRightSecondary.setPower(variableSpeed);
+			motorLeftPrimary.setPower(-variableSpeed);
+			motorLeftSecondary.setPower(-variableSpeed);
         }
 
 		// On right bumper push, turn right
 		if (gamepad1.right_bumper == true) {
-			motorRightPrimary.setPower(-variablespeed);
-			motorRightSecondary.setPower(-variablespeed);
-			motorLeftPrimary.setPower(variablespeed);
-			motorLeftSecondary.setPower(variablespeed);
+			motorRightPrimary.setPower(-variableSpeed);
+			motorRightSecondary.setPower(-variableSpeed);
+			motorLeftPrimary.setPower(variableSpeed);
+			motorLeftSecondary.setPower(variableSpeed);
 		}
 
 
