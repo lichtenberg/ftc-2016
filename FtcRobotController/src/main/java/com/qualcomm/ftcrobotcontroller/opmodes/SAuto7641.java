@@ -123,11 +123,14 @@ public class SAuto7641 extends OpMode {
 
         touchSensor = hardwareMap.touchSensor.get("touch1");
 
+
+		colorSensor2.setI2cAddress(0x3e);
         /*
          * Set up the color sensor.
          */
-		colorSensor1.enableLed(true);
-		colorSensor2.enableLed(false);
+		colorSensor1.enableLed(false);
+		colorSensor2.enableLed(true);
+
 
 
 	}
@@ -526,8 +529,8 @@ public class SAuto7641 extends OpMode {
 		//telemetry.addData("Text", "*** Robot Data***");
 		//telemetry.addData("Time", String.format("%f", this.time));
 
-		telemetry.addData("Color:", "A:" + colorSensor1.alpha() + " R:" + colorSensor1.red() + " G:" + colorSensor1.green() + " B:" + colorSensor1.blue());
-		telemetry.addData("Color:", "A:" + colorSensor2.alpha() + " R:" + colorSensor2.red() + " G:" + colorSensor2.green() + " B:" + colorSensor2.blue());
+		telemetry.addData("Color1:", "A:" + colorSensor1.alpha() + " R:" + colorSensor1.red() + " G:" + colorSensor1.green() + " B:" + colorSensor1.blue());
+		telemetry.addData("Color2:", "A:" + colorSensor2.alpha() + " R:" + colorSensor2.red() + " G:" + colorSensor2.green() + " B:" + colorSensor2.blue());
 		telemetry.addData("OptDist", distanceSensor.getLightDetectedRaw());
 		telemetry.addData("baseline", blackBaseLine + (lineDetected ? " line" : " no line"));
 		telemetry.addData("heading", gyroReader.getHeading());
