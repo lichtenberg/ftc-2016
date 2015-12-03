@@ -32,6 +32,7 @@ public class MitchAuto1 extends OpMode {
 	I2cDevice gyro;
     TouchSensor touchSensor;
 
+
     //
     // The member variables below are used for when we are executing a turn.
     //
@@ -133,7 +134,6 @@ public class MitchAuto1 extends OpMode {
          */
 
 		colorSensor.enableLed(true);
-
 
 	}
 
