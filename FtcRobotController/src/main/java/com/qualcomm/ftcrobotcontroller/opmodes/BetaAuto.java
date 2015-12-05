@@ -111,8 +111,8 @@ public class BetaAuto extends OpMode {
         motorFrontLeft = hardwareMap.dcMotor.get("motor-2");
         motorBackRight = hardwareMap.dcMotor.get("motor-3");
         motorBackLeft = hardwareMap.dcMotor.get("motor-4");
-        motorFrontLeft.setDirection(DcMotor.Direction.REVERSE);
-        motorBackRight.setDirection(DcMotor.Direction.REVERSE);
+        motorFrontRight.setDirection(DcMotor.Direction.REVERSE);
+        motorBackLeft.setDirection(DcMotor.Direction.REVERSE);
 
         /*
          * Servos
