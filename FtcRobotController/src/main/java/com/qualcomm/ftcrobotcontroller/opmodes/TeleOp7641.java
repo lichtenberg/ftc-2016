@@ -28,6 +28,8 @@ public class TeleOp7641 extends OpMode{
     final static double ARM_MAX_RANGE  = 0.90;
     final static double CLAW_MIN_RANGE  = 0.20;
     final static double CLAW_MAX_RANGE  = 0.7;
+    final static double ZIP_OPEN = 0.5;
+    final static double ZIP_CLOSED = 1.0;
 
 	// position of the arm servo.
 	double armPosition;
@@ -40,13 +42,17 @@ public class TeleOp7641 extends OpMode{
 
 	// amount to change the claw servo position by
 	double clawDelta = 0.1;
+    Boolean oldX;
 
 	DcMotor motorRightPrimary;
 	DcMotor motorRightSecondary;
 	DcMotor motorLeftPrimary;
 	DcMotor motorLeftSecondary;
+    Servo zipServo;
+	Servo personDropperServo;
 
-
+    double zipPosition;
+    double personPosition;
 	/**
 	 * Constructor
 	 */
@@ -70,6 +76,9 @@ public class TeleOp7641 extends OpMode{
 		motorLeftPrimary = hardwareMap.dcMotor.get("motor-2");
 		motorRightSecondary = hardwareMap.dcMotor.get("motor-3");
 		motorLeftSecondary = hardwareMap.dcMotor.get("motor-4");
+        zipServo = hardwareMap.servo.get("servo-zip");
+        personDropperServo = hardwareMap.servo.get("servo-person");
+        oldX = false;
 // WARNING: Ugly motor direction fix ahead
         motorRightPrimary.setDirection(DcMotor.Direction.REVERSE);
         motorLeftSecondary.setDirection(DcMotor.Direction.REVERSE);
@@ -81,6 +90,12 @@ public class TeleOp7641 extends OpMode{
 	 * 
 	 * @see com.qualcomm.robotcore.eventloop.opmode.OpMode#run()
 	 */
+    public void init_loop() {
+
+        zipServo.setPosition(ZIP_CLOSED);
+        zipPosition = ZIP_CLOSED;
+
+    }
 	@Override
 	public void loop() {
 		/*
@@ -89,6 +104,18 @@ public class TeleOp7641 extends OpMode{
 		 * Gamepad 1 controls the motors via the left stick, and it controls the
 		 * wrist/claw via the a,b, x, y buttons
 		 */
+        zipServo.setPosition(zipPosition);
+        personDropperServo.setPosition(personPosition);
+        if (gamepad2.x && !oldX) {
+            zipPosition = (zipPosition != ZIP_CLOSED) ? ZIP_CLOSED : ZIP_OPEN;
+        }
+
+        if (gamepad2.dpad_up == true){
+            zipPosition += 0.1;
+        }
+        if (gamepad2.dpad_down == true){
+            zipPosition -= 0.1;
+        }
 
         // tank drive
         // note that if y equal -1 then joystick is pushed all of the way forward.
@@ -138,7 +165,12 @@ public class TeleOp7641 extends OpMode{
 		 * are currently write only.
 		 */
         // telemetry.addData("distance", "Distance Travelled : " + String.format("%.2f", encoder*2240*6*3.14) + "inches");
+        telemetry.addData("zip","Zip position " + zipServo.getPosition());
 
+        if (gamepad1.x && !oldX) {
+            zipPosition = (zipPosition != ZIP_CLOSED) ? ZIP_CLOSED : ZIP_OPEN;
+        }
+        oldX = gamepad2.x;
     }
 
 	/*
