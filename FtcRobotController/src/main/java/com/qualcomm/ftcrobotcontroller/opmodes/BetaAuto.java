@@ -5,12 +5,8 @@ import com.qualcomm.ftccommon.DbgLog;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorController.RunMode;
 import com.qualcomm.robotcore.hardware.I2cDevice;
-import com.qualcomm.robotcore.hardware.OpticalDistanceSensor;
 import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.hardware.TouchSensor;
-import com.qualcomm.robotcore.util.Range;
 
 
 
@@ -34,12 +30,15 @@ public class BetaAuto extends OpMode {
     ColorSensor colorSensorL;
     //OpticalDistanceSensor distanceSensor;
     I2cDevice gyro;
-    TouchSensor touchSensor;
     Servo fingerLeft;
     Servo fingerRight;
+    Servo personDropper;
 
-    double fingerLeftDefaultPos = 0.05;
-    double fingerRightDefaultPos = 0.05;
+    //
+    // The member variables used in servos
+    //
+    final static double BUTTON_PRESSED = 0.0;
+    final static double BUTTON_NOTPRESSED = 0.6;
 
     //
     // The member variables below are used for when we are executing a turn.
@@ -47,26 +46,27 @@ public class BetaAuto extends OpMode {
     int destHeading;
     int degreesToTurn;
     boolean shouldTurnLeft;
-    Boolean gyroTurnIsRunning = false;
+    boolean gyroTurnIsRunning = false;
     ModernGyroReader gyroReader;
 
     //
     // The member variables below are used when we are following a line.
     //
-
     int blackBaseLine = 0;
-    Boolean lineDetected = false;
-    Boolean lineFollowerIsRunning = false;
+    boolean lineDetected = false;
+    boolean lineFollowerIsRunning = false;
 
     //
-    // The member variables below are used when we are pushing the beacon button.
+    // The member variables below are used when we are detecting the beacon and pushing the button.
     //
-    Boolean buttonIsPushed = false;
+    boolean beaconLeftIsBlue = false;
+    int detectBlueStreak = 0;
+    int detectRedStreak = 0;
 
     //
-    // The member variable used for delaying
+    // The member variables used for delaying
     //
-    Boolean delayIsRunning;
+    boolean delayIsRunning = false;
     double startDelayTime;
     double stopDelayTime;
 
@@ -77,30 +77,9 @@ public class BetaAuto extends OpMode {
     double gearReduction = 2;     // Amount of gear reduction in drive train //7641 Bot 2, Mentor Bot 1, was 1.0
     double encoderCountsPerRevolution = 1120; // This is the number of encoder counts per turn of the output shaft. Do not change.
 
-    Boolean moveDistanceIsRunning = false;
-    int moveDistanceDelay = 0;
+    boolean moveDistanceIsRunning = false;
 
-
-
-    //
-    // The member variables below are for holding the current "state" of our program.
-    //
-
-    /*
-    //enum has been moved to bottom of code for easy editing
-    enum autoStep {
-        IDLE,
-        FORWARD_1,
-        TURN_1,
-        TURN_2,
-        FORWARD_2,
-        STOP
-    };
-
-
-    autoStep currentStep = autoStep.IDLE;
-    */
-
+    // enum has been moved to bottom of code for easy editing
 
     /**
      * Constructor
@@ -114,6 +93,7 @@ public class BetaAuto extends OpMode {
      * 
      * @see com.qualcomm.robotcore.eventloop.opmode.OpMode#start()
      */
+
     @Override
     public void init() {
 		/*
@@ -127,27 +107,28 @@ public class BetaAuto extends OpMode {
 		/*
 		 *   Gather motors out of the hardware map.
 		 */
-        motorFrontRight = hardwareMap.dcMotor.get("motor_1");
-        motorFrontLeft = hardwareMap.dcMotor.get("motor_2");
-        motorBackRight = hardwareMap.dcMotor.get("motor_3");
-        motorBackLeft = hardwareMap.dcMotor.get("motor_4");
+        motorFrontRight = hardwareMap.dcMotor.get("motor-1");
+        motorFrontLeft = hardwareMap.dcMotor.get("motor-2");
+        motorBackRight = hardwareMap.dcMotor.get("motor-3");
+        motorBackLeft = hardwareMap.dcMotor.get("motor-4");
         motorFrontLeft.setDirection(DcMotor.Direction.REVERSE);
         motorBackRight.setDirection(DcMotor.Direction.REVERSE);
 
         /*
          * Servos
          */
-        fingerRight = hardwareMap.servo.get("servo_1");
-        fingerLeft = hardwareMap.servo.get("servo_2");
+        fingerRight = hardwareMap.servo.get("servo-right");
+        fingerLeft = hardwareMap.servo.get("servo-left");
+        personDropper = hardwareMap.servo.get("servo-person");
         fingerRight.setDirection(Servo.Direction.FORWARD);
         fingerLeft.setDirection(Servo.Direction.REVERSE);
 
         /*
          * Gather the sensors out of the hardware map.
          */
-        // TODO
-        colorSensorB = hardwareMap.colorSensor.get("color1");
-        //colorSensorL = hardwareMap.colorSensor.get("color2");
+        colorSensorB = hardwareMap.colorSensor.get("color-front");
+        colorSensorL = hardwareMap.colorSensor.get("color-bottom");
+        colorSensorL.setI2cAddress(0x3E);
         //distanceSensor = hardwareMap.opticalDistanceSensor.get("dist1");
 
         /*
@@ -156,22 +137,18 @@ public class BetaAuto extends OpMode {
          * of the dirty work of reading the heading out of the gyro.
          */
 
-        gyro = hardwareMap.i2cDevice.get("gyro1");
+        gyro = hardwareMap.i2cDevice.get("gyro-1");
         gyroReader = new ModernGyroReader(gyro);
-
-
-        touchSensor = hardwareMap.touchSensor.get("touch1");
 
         /*
          * Set up the color sensor.
          */
 
-        colorSensorB.enableLed(true);
-        //colorSensorL.enableLed(true);
+        //colorSensorB.enableLed(true); // nope. don't enable the LED
+        colorSensorL.enableLed(true);
 
 
     }
-
 
     //
     // normalizeHeading(heading)
@@ -180,12 +157,12 @@ public class BetaAuto extends OpMode {
     // if the heading is 370 degrees, that's really the same as 10 degrees.
     // If the heading is -10 degrees, that's really 350.
     //
+
     private int normalizeHeading(int heading) {
         while (heading < 0) heading += 360;
         while (heading >= 360) heading -= 360;
         return heading;
     }
-
 
     //
     // subtractHeadings(a,b)
@@ -195,6 +172,7 @@ public class BetaAuto extends OpMode {
     // This routine tries to be smart about the direction, so it will pick the smaller of
     // the two differences (turning left 10 vs right 350).
     //
+
     private int subtractHeadings(int a, int b) {
         int difference;
 
@@ -224,6 +202,7 @@ public class BetaAuto extends OpMode {
     // If you want to move 12 inches, you would need the wheels to turn 1.91 times.
     // 1.91 rotations is 1.91 * 1120 * 2 encoder counts = 4274.
     //
+
     private int inchesToEncoder(double inches) {
         double wheelCircumference = Math.PI * wheelDiameter;
         double encoderCounts;
@@ -232,7 +211,6 @@ public class BetaAuto extends OpMode {
 
         return (int) encoderCounts;
     }
-
 
     //
     // The init_loop routine is called repeatedly in between the time you press the INIT
@@ -244,7 +222,6 @@ public class BetaAuto extends OpMode {
     // tile and the white line.
     //
 
-
     @Override
     public void init_loop() {
         int rawSensorValue;
@@ -254,10 +231,7 @@ public class BetaAuto extends OpMode {
 
         ftcConfig.init_loop(hardwareMap.appContext, this);
 
-        // TODO
-        rawSensorValue = 0;
-        //rawSensorValue = distanceSensor.getLightDetectedRaw();
-        //rawSensorValue = colorSensorL.alpha();
+        rawSensorValue = colorSensorL.alpha();
         if (rawSensorValue > blackBaseLine) {
             blackBaseLine = rawSensorValue;
         }
@@ -268,121 +242,132 @@ public class BetaAuto extends OpMode {
         //
         telemetry.addData("baseline", blackBaseLine);
         telemetry.addData("buttons", (gamepad1.x ? "X" : "") + (gamepad1.y ? "Y" : ""));
-        telemetry.addData("touch", touchSensor.isPressed() ? "Touch" : "no_touch");
-
 
         //
         // Keep reading the gyro all the time.
         //
 
         gyroReader.checkGyro();
-
     }
-
-
-    //
-    // Although this example is for autonomous mode, when we reach the end this particular
-    // program lets you continue with teleop.  In a real competition, this would not be allowed.
-    //
-    private void teleopMode() {
-        float left = -gamepad1.left_stick_y;
-        float right = -gamepad1.right_stick_y;
-
-        // clip the right/left values so that the values never exceed +/- 1
-        right = Range.clip(right, -1, 1);
-        left = Range.clip(left, -1, 1);
-
-        // scale the joystick value to make it easier to control
-        // the robot more precisely at slower speeds.
-        right = (float) scaleInput(right);
-        left = (float) scaleInput(left);
-
-        // write the values to the motors
-        motorFrontRight.setPower(right);
-        motorFrontLeft.setPower(left);
-        motorBackRight.setPower(right);
-        motorBackLeft.setPower(left);
-    }
-
 
     //
     // This is the line sensor follower step.
     //
-    // TODO change for color sensor
-    protected Boolean lineFollower() {
+
+    protected boolean lineFollower() {
         //
         // If we have not detected the line yet, keep going
         // at 0.25 power.   Once we see the white line,
         // set lineDetected true and start following.
 
-        motorFrontLeft.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
-        motorFrontRight.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
-
         if (lineFollowerIsRunning) {
 
-            // TODO
-            int lineSensor = 0;
-            //int lineSensor = colorSensorL.alpha(); // Get the amount of light detected by the sensor as an int
+            int lineSensor = colorSensorL.alpha(); // Get the amount of light detected by the sensor as an int
             //int lineSensor = distanceSensor.getLightDetectedRaw(); // Get the amount of light detected by the sensor as an int
 
             if (lineSensor > (blackBaseLine + 50)) {
                 if (!lineDetected) {
                     DbgLog.msg("LINE_FOLLOW:  Detected the line");
-
+                    int distanceInEncoderCounts = inchesToEncoder(18);
+                    motorFrontLeft.setTargetPosition(motorFrontLeft.getCurrentPosition() + distanceInEncoderCounts);
+                    motorFrontRight.setTargetPosition(motorFrontRight.getCurrentPosition() + distanceInEncoderCounts);
                     lineDetected = true;
                 }
             }
-
             if (!lineDetected) {
-                // Line not detected yet.   Keep going straight.
-                motorFrontLeft.setPower(0.20);
-                motorFrontRight.setPower(0.20);
-                motorBackRight.setPower(0.20);
-                motorBackLeft.setPower(0.20);
-            } else {
-
-                // Line has been detected.   If we see the line, turn one way.
-                // If we do not see the line, turn the other way.
-                // The robot will oscillate as it follows the line.
-
-                if (lineSensor > (blackBaseLine + 50)) { // light detected
-                    lineDetected = true;
-                    motorFrontLeft.setPower(0);
-                    motorFrontRight.setPower(0.15);
-                    motorBackLeft.setPower(0);
-                    motorBackRight.setPower(0.15);
-                } else {
-                    motorFrontLeft.setPower(0.15);
-                    motorFrontRight.setPower(0);
-                    motorBackLeft.setPower(0.15);
-                    motorBackRight.setPower(0);
-                }
-
-            }
-            //
-            // If we hit the wall, we will use our touch sensor to stop this step.
-            // We will monitor the touch sensor even if we haven't found the line yet,
-            // just in case we miss the line entirely and slam into the wall.
-            //
-
-            if (touchSensor.isPressed()) {
-                DbgLog.msg("LINE_FOLLOW:  touch sensor activated, stopping");
-
+                // Line not detected yet. Keep going straight.
+                motorFrontLeft.setPower(0.10);
+                motorFrontRight.setPower(0.10);
+                motorBackRight.setPower(0.10);
+                motorBackLeft.setPower(0.10);
+            } else if (motorFrontRight.getCurrentPosition() >= motorFrontRight.getTargetPosition()) {
                 motorFrontLeft.setPower(0);
                 motorFrontRight.setPower(0);
                 motorBackLeft.setPower(0);
                 motorBackRight.setPower(0);
+                // drop the climbers
+                personDropper.setPosition(0);
+                while(delay(0.1)) {}
+                personDropper.setPosition(0.8);
                 lineFollowerIsRunning = false;
-            }
+            } else {
+                // Line has been detected.   If we see the line, turn one way.
+                // If we do not see the line, turn the other way.
+                // The robot will oscillate as it follows the line.
 
+                // Determines if the robot should push the left button or the right one
+                // and extends the corresponding finger
+                if (ifPushLeftButton()) {
+                    if (fingerLeft.getPosition() > 0.55) {
+                        fingerLeft.setPosition(BUTTON_PRESSED);
+                    }
+                    if (fingerRight.getPosition() < 0.05) {
+                        fingerRight.setPosition(BUTTON_NOTPRESSED);
+                    }
+                } else {
+                    if (fingerLeft.getPosition() < 0.05) {
+                        fingerLeft.setPosition(BUTTON_NOTPRESSED);
+                    }
+                    if (fingerRight.getPosition() > 0.55) {
+                        fingerRight.setPosition(BUTTON_PRESSED);
+                    }
+                }
+                if (lineSensor > (blackBaseLine + 50)) { // light detected
+                    lineDetected = true;
+                    motorFrontLeft.setPower(0);
+                    motorFrontRight.setPower(0.10);
+                    motorBackLeft.setPower(0);
+                    motorBackRight.setPower(0.10);
+                } else {
+                    motorFrontLeft.setPower(0.10);
+                    motorFrontRight.setPower(0);
+                    motorBackLeft.setPower(0.10);
+                    motorBackRight.setPower(0);
+                }
+            }
         } else {
+            lineDetected = false;
             lineFollowerIsRunning = true;
         }
-
         return lineFollowerIsRunning;
-
     }
 
+    protected boolean ifPushLeftButton() {
+        if (colorSensorB.blue() > 1) { // if a blue is detected
+            // resets the red streak when a blue is initially detected
+            if (detectBlueStreak == 0) detectRedStreak = 0;
+            // u should know this...
+            detectBlueStreak++;
+            // if there is less than 10 red detections within the 25 blue detection streak
+            // the code is sure the detection is really blue.
+            if (detectBlueStreak > 25) {
+                if (detectRedStreak < 10) {
+                    // determines that the beaconLeft is really blue, and resets the red streak
+                    detectRedStreak = 0;
+                    beaconLeftIsBlue = true;
+                }
+                if (detectRedStreak >= 10) {
+                    // resets both streaks and start over when there is too much red in the blue streak
+                    detectBlueStreak = 0;
+                    detectRedStreak = 0;
+                }
+            }
+        } else {
+            if (detectRedStreak == 0) detectBlueStreak = 0;
+            detectRedStreak++;
+            if (detectRedStreak > 25 && detectBlueStreak < 10){
+                if (detectBlueStreak < 10) {
+                    detectBlueStreak = 0;
+                    beaconLeftIsBlue = false;
+                }
+                if (detectBlueStreak >= 10) {
+                    detectBlueStreak = 0;
+                    detectRedStreak = 0;
+                }
+            }
+        }
+        return !(beaconLeftIsBlue ^ !isRed); // check if the left beacon matches the team color (NOT(XOR))
+    }
 
     //
     // gyroTurn(howMuch)
@@ -394,9 +379,12 @@ public class BetaAuto extends OpMode {
     // 'false' is returned when the turn is complete.
     //
 
-    protected Boolean gyroTurn(int howMuch) {
-        motorFrontLeft.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
-        motorFrontRight.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
+    protected boolean gyroTurn(int howMuch) {
+
+        // We update the gyro's currentHeading each time the loop is called.
+        // It runs on its own, we query the current compass position by reading the
+        // latest value that checkGyro gets from the compass.
+        gyroReader.checkGyro();
 
         if (gyroTurnIsRunning) {
             int curHeading = gyroReader.getHeading();
@@ -408,14 +396,6 @@ public class BetaAuto extends OpMode {
 
             double turnSpeed = 0.10;
             double slowTurnSpeed = 0.10;
-            /*
-            if (degreesToTurn > 0) {
-                shouldTurnLeft = true;
-            } else {
-                shouldTurnLeft = false;
-            }
-            */
-            //shouldTurnLeft = false;
 
             // If we need to turn
 
@@ -433,93 +413,67 @@ public class BetaAuto extends OpMode {
                 gyroTurnIsRunning = false;
 
             } else if (shouldTurnLeft) {
-                motorFrontLeft.setPower(-turnSpeed);//-
+                motorFrontLeft.setPower(-turnSpeed);
                 motorFrontRight.setPower(turnSpeed);
                 motorBackLeft.setPower(-turnSpeed);
                 motorBackRight.setPower(turnSpeed);
-
             } else {
                 motorFrontLeft.setPower(turnSpeed);
-                motorFrontRight.setPower(-turnSpeed);//-
+                motorFrontRight.setPower(-turnSpeed);
                 motorBackLeft.setPower(turnSpeed);
                 motorBackRight.setPower(-turnSpeed);
-
             }
         } else {
             destHeading = normalizeHeading(gyroReader.getHeading() + howMuch);
 
-            motorFrontLeft.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
-            motorFrontRight.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
-
             DbgLog.msg("STARTING TURN: amount " + howMuch + " destHeading " + destHeading);
 
-            shouldTurnLeft = !(degreesToTurn > 0); // (d... > 0) is a boolean value
-            //if (degreesToTurn > 0) {
-            //    shouldTurnLeft
-            //}
+            shouldTurnLeft = !(degreesToTurn > 0); // if-then-else on one line
             gyroTurnIsRunning = true;
         }
-
         return gyroTurnIsRunning;
     }
 
-    public Boolean moveDistance(double distanceInInches, double motorPower) {
+    // ===== moveDistance =====
+    // WARNING: HAPHAZARDLY SLAPPED-TOGETHER TEMPORARILY SKETCHY FIX
+    // FOR RAGE QUIT-INDUCING BUGS AHEAD!!! PROCEED AT YOUR OWN RISK.
+    // ( ^^ actually nope lol its fixed ^^)
+
+    // ***RESOLVED***
+    // Seems like the motorFrontXxx.getCurrentPosition() values are +- inverted, so add a negative to getCurrentPosition()
+    // Update: the RIGHT motors were reversed instead of the left ones, so that has been corrected
+    // The reasoning: both left and right motors are displaying that they are moving backwards
+    // so this is why they have been displaying negative values for currentPosition
+
+    // ***RESOLVED***
+    // Another bug: the motors still twitch and move a bit even after the motors have done their job
+    // This has been observed in the motorFrontRight on the MentorBot, not the FrontLeft
+    // Reading the telemetry data, the cause for this is the setChannelMode(RunMode.*) is not changing
+    // Seems like we never needed the RunMode.RUN_TO_POSITION after all
+    // Since there is already code that stops the robot, we don't need to mess with RunMode or isBusy()
+
+    // ^^^ DUDE U WOT M8 ??!! ^^^
+    // Turns out part of the problem is ***NOT ADDING "break;"*** to the end of each step in the switch statement of the loop code
+
+    public boolean moveDistance(double distanceInInches, double motorPower) {
         // If the "move distance" routine is running, test to see if we should
         // be stopped.
 
         // If the "move distance" routine is not yet running, set it to run.
 
         // The return value of this routine is 'true' if we are still busy.
-        motorFrontLeft.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
-        motorFrontRight.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
 
         if (moveDistanceIsRunning) {
-            //moveDistanceDelay++; // added to fix isBusy() bug
-            //DbgLog.msg("busy: " + moveDistanceDelay + ';' + motorFrontLeft.isBusy() + ';' + motorFrontRight.isBusy());
-            //DbgLog.msg("enc " + motorFrontLeft.getCurrentPosition() + " " + motorFrontLeft.getCurrentPosition());
-
-            // WARNING: HAPHAZARDLY SLAPPED-TOGETHER TEMPORARILY SKETCHY FIX
-            // FOR RAGE QUIT-INDUCING BUGS AHEAD!!! PROCEED AT YOUR OWN RISK.
-
-            // ***RESOLVED***
-            // Seems like the motorFrontXxx.getCurrentPosition() values are +- inverted, so add a negative to getCurrentPosition()
-            // Update: the RIGHT motors were reversed instead of the left ones, so that has been corrected
-            // The reasoning: both left and right motors are displaying that they are moving backwards
-            // so this is why they have been displaying negative values for currentPosition
-
-            // ***RESOLVED***
-            // Another bug: the motors still twitch and move a bit even after the motors have done their job
-            // This has been observed in the motorFrontRight on the MentorBot, not the FrontLeft
-            // Reading the telemetry data, the cause for this is the setChannelMode(RunMode.*) is not changing
-            // Seems like we never needed the RunMode.RUN_TO_POSITION after all
-            // Since there is already code that stops the robot, we don't need to mess with RunMode or isBusy()
-
-            // ^^^ DUDE U WOT M8 ??!! ^^^
-            // Turns out the problem is NOT ADDING "break;" to the end of each step in the switch statement of the loop code
-
-            if ((motorFrontRight.getCurrentPosition() >= (motorFrontRight.getTargetPosition()) && distanceInInches > 0) || (motorFrontRight.getCurrentPosition() <= (motorFrontRight.getTargetPosition()) && distanceInInches < 0)){
-                    motorFrontLeft.setPower(0);
-                    motorFrontRight.setPower(0);
-                    motorBackLeft.setPower(0);
-                    motorBackRight.setPower(0);
-                    motorFrontLeft.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
-                    motorFrontRight.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
-                    //DbgLog.msg("enc " + motorFrontLeft.getCurrentPosition() + " " + motorFrontLeft.getTargetPosition());
-                    //DbgLog.msg("busy: " + moveDistanceDelay + ';' + motorFrontLeft.isBusy() + ';' + motorFrontRight.isBusy());
-                    //motorBackLeft.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
-                    //motorBackRight.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
-                    telemetry.addData("MOVE_DISTANCE: finished", 0);
-                    DbgLog.msg("MOVE_DISTANCE: finished");
-
+            if ((motorFrontRight.getCurrentPosition() >= motorFrontRight.getTargetPosition() && distanceInInches > 0) || (motorFrontRight.getCurrentPosition() <= (motorFrontRight.getTargetPosition()) && distanceInInches < 0)){
+                motorFrontLeft.setPower(0);
+                motorFrontRight.setPower(0);
+                motorBackLeft.setPower(0);
+                motorBackRight.setPower(0);
+                DbgLog.msg("MOVE_DISTANCE: finished");
                 moveDistanceIsRunning = false;
             }
         } else {
             int distanceInEncoderCounts = inchesToEncoder(distanceInInches);
-
-            //motorFrontLeft.setChannelMode(RunMode.RUN_TO_POSITION);
-            //motorFrontRight.setChannelMode(RunMode.RUN_TO_POSITION);
-            //motorFrontLeft.setChannelMode(RunMode.RUN_USING_ENCODERS);
-            //motorFrontRight.setChannelMode(RunMode.RUN_USING_ENCODERS);
 
             DbgLog.msg("Move:" + distanceInEncoderCounts + ';' + motorFrontLeft.getCurrentPosition() + ';' + motorFrontLeft.getTargetPosition());
 
@@ -538,31 +492,12 @@ public class BetaAuto extends OpMode {
                 motorBackLeft.setPower(-motorPower);
                 motorBackRight.setPower(-motorPower);
             }
-            //DbgLog.msg("MOVE_DISTANCE: distance " + distanceInInches + " power " + motorPower + ';' + distanceInEncoderCounts + ';' + motorFrontLeft.getTargetPosition());
-            //DbgLog.msg("Move:" + distanceInEncoderCounts + ';' + motorFrontLeft.getCurrentPosition() + ';' + motorFrontLeft.getTargetPosition());
-            //DbgLog.msg("busy xxx: " + motorFrontLeft.isBusy() + ';' + motorFrontRight.isBusy());
-
-            //moveDistanceDelay = 0;
             moveDistanceIsRunning = true;
         }
-
         return moveDistanceIsRunning;
-
     }
 
-    Boolean beaconLeftIsRed;
-
-    //TODO wait for the hardware people and the girls to complete
-    public Boolean pushButton() {
-        if (true) {
-            buttonIsPushed = false;
-        } else {
-            buttonIsPushed = true;
-        }
-        return buttonIsPushed;
-    }
-
-    protected Boolean delay(double secs) {
+    protected boolean delay(double secs) {
         if (delayIsRunning) {
             if (startDelayTime >= stopDelayTime) {
                 delayIsRunning = false;
@@ -575,71 +510,6 @@ public class BetaAuto extends OpMode {
         return delayIsRunning;
     }
 
-    /*
-     * This method scales the joystick input so for low joystick values, the
-     * scaled value is less than linear.  This is to make it easier to drive
-     * the robot more precisely at slower speeds.
-     */
-    double scaleInput(double dVal) {
-        double[] scaleArray = {0.0, 0.05, 0.09, 0.10, 0.12, 0.15, 0.18, 0.24,
-                0.30, 0.36, 0.43, 0.50, 0.60, 0.72, 0.85, 1.00, 1.00};
-
-        // get the corresponding index for the scaleInput array.
-        int index = (int) (dVal * 16.0);
-
-        // index should be positive.
-        if (index < 0) {
-            index = -index;
-        }
-
-        // index cannot exceed size of array minus 1.
-        if (index > 16) {
-            index = 16;
-        }
-
-        // get value from the array.
-        double dScale = 0.0;
-        if (dVal < 0) {
-            dScale = -scaleArray[index];
-        } else {
-            dScale = scaleArray[index];
-        }
-
-        // return scaled value.
-        return dScale;
-    }
-
-    /*
-    Boolean moveServoIsRunning = false;
-    public Boolean moveServoLeft (double posLeft) {
-        if (moveServoIsRunning) {
-            if (fingerLeft.getPosition() < (posLeft + 0.03) || fingerLeft.getPosition() > (posLeft - 0.03)) {
-                moveServoIsRunning = false;
-            } else {
-
-            }
-        } else {
-            fingerLeft.setPosition(posLeft);
-            moveServoIsRunning = true;
-        }
-        return moveServoIsRunning;
-    }
-
-    public Boolean moveServoRight (double posRight) {
-        if (moveServoIsRunning) {
-            if (fingerRight.getPosition() < (posRight + 0.03) || fingerRight.getPosition() > (posRight - 0.03)) {
-                moveServoIsRunning = false;
-            } else {
-
-            }
-        } else {
-            fingerRight.setPosition(posRight);
-            moveServoIsRunning = true;
-        }
-        return moveServoIsRunning;
-    }
-    */
-
     ///////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -651,12 +521,13 @@ public class BetaAuto extends OpMode {
     //
     // **********
     // CHANGE ANYTHING BELOW THIS DEPENDING ON THE OBJECTIVES.
-    // ANYTHING ABOVE THIS COMMENT SHOULD NOT BE CHANGED UNLESS NECESSARY
-    // OR PROGRAM WILL NOT FUNCTION PROPERLY.
     // **********
     //
 
-    //change enum based on steps in loop
+    //
+    // The member variables below are for holding the current "state" of our program.
+    // change enum based on steps in loop
+    //
     enum autoStep {
         IDLE,
         DELAY,
@@ -666,7 +537,6 @@ public class BetaAuto extends OpMode {
         FORWARD_2,
         FORWARD_3,
         FOLLOW_LINE,
-        PUSH_BUTTON,
         STOP
     }
 
@@ -674,7 +544,7 @@ public class BetaAuto extends OpMode {
 
     boolean isRed;
     boolean startNearMountain;
-    int delayTime;
+    double delayTime;
     FtcConfig.AutonType autonType;
 
     //
@@ -697,7 +567,6 @@ public class BetaAuto extends OpMode {
         autonType = ftcConfig.param.autonType;
         startNearMountain = ftcConfig.param.startNearMountain;
         delayTime = ftcConfig.param.delayInSec;
-        //fingerRight.setPosition(0.1);
     }
 
     //
@@ -709,6 +578,7 @@ public class BetaAuto extends OpMode {
     // Do not try to wait for things to happen in this routine, that will just make
     // the runtime angry.
     //
+
     //@Override
     public void loop() {
 
@@ -728,43 +598,34 @@ public class BetaAuto extends OpMode {
             beacon();
             beaconToMountain();
         } else if (autonType == FtcConfig.AutonType.TEST) { //ftcConfig.param.autonType.TEST will yield access via static message
-            //test();
+            test();
         }
-        testServo();
-        //fingerRight.setDirection(Servo.Direction.REVERSE);
-        //fingerLeft.setDirection(Servo.Direction.FORWARD);
+
         fingerRight.setDirection(Servo.Direction.FORWARD);
         fingerLeft.setDirection(Servo.Direction.REVERSE);
-        //fingerRight.setPosition(fingerRightDefaultPos);
-        //fingerLeft.setPosition(fingerLeftDefaultPos);
-        //fingerRight.setPosition(0.2);
-        //fingerLeft.setPosition(0.2);
-        //fingerRight.setDirection(Servo.Direction.FORWARD);
-        //fingerLeft.setDirection(Servo.Direction.REVERSE);
-        //fingerRight.setPosition(0.1);
-        //fingerLeft.setPosition(0.1);
 
         telemetry.addData("enc: ", motorFrontLeft.getCurrentPosition() + " " + motorFrontRight.getCurrentPosition() + " " + motorFrontLeft.getTargetPosition());
         telemetry.addData("gyro: ", " cur " + gyroReader.curHeading + " dest " + destHeading + " degsToTurn " + degreesToTurn);
-        telemetry.addData("channelMode: ", motorFrontLeft.getChannelMode());
         telemetry.addData("currentStep: ", currentStep);
-        telemetry.addData("autonType", autonType);
-        telemetry.addData("random stuff", fingerLeft.getPosition() + " " + fingerRight.getPosition());
+        telemetry.addData("autonType: ", autonType);
+        telemetry.addData("finger pos: ", fingerLeft.getPosition() + " " + fingerRight.getPosition());
+        telemetry.addData("personDropper pos: ", personDropper.getPosition());
     }
 
+    // TODO the values in the parentheses still have to be changed as the robot is tested
+    // put everything that should have been in the loop method (the switch statement)
+
     public void beacon() {
-        //put everything that should have been in the loop method (the switch statement)
-        //TODO the values in the parentheses still have to be changed as the robot is tested
         switch (currentStep) {
             case IDLE:
                 break;
             case DELAY:
-                if (!delay((double)delayTime)) {
+                if (!delay(delayTime)) {
                     currentStep = autoStep.FORWARD_1;
                 }
                 break;
             case FORWARD_1: //leave spawn
-                if (!moveDistance(12, 0.3)) {  //12 in per sec
+                if (!moveDistance(18, 0.3)) {  //12 in per sec
                     currentStep = autoStep.TURN_1;
                 }
                 break;
@@ -799,22 +660,16 @@ public class BetaAuto extends OpMode {
                 }
                 break;
             case FORWARD_3: //proceed to beacon
-                if (!moveDistance(12.0, 0.3)) {
+                if (!moveDistance(18.0, 0.3)) {
                     currentStep = autoStep.FOLLOW_LINE;
                 }
                 break;
             case FOLLOW_LINE: //follows line to the beacon
                 if (!lineFollower()) {
-                    currentStep = autoStep.PUSH_BUTTON;
-                }
-                break;
-            case PUSH_BUTTON:
-                if (!pushButton()) { //TODO pushButton has not been coded
                     currentStep = autoStep.STOP;
                 }
                 break;
             case STOP:
-                //teleopMode();
                 break;
         }
     }
@@ -824,7 +679,7 @@ public class BetaAuto extends OpMode {
             case IDLE:
                 break;
             case DELAY:
-                if (!delay((double)delayTime)) {
+                if (!delay(delayTime)) {
                     currentStep = autoStep.FORWARD_1;
                 }
                 break;
@@ -839,7 +694,7 @@ public class BetaAuto extends OpMode {
                 }
                 break;
             case FORWARD_2: //continue moving away from beacon
-                if (!moveDistance(12.0, 0.3)) { //TODO move how much?
+                if (!moveDistance(18.0, 0.3)) { //TODO move how much?
                     currentStep = autoStep.TURN_2;
                 }
                 break;
@@ -855,7 +710,7 @@ public class BetaAuto extends OpMode {
                 }
                 break;
             case FORWARD_3: //move up
-                if (!moveDistance(12.0, 0.3)) {
+                if (!moveDistance(18.0, 0.3)) {
                     currentStep = autoStep.STOP;
                 }
                 break;
@@ -864,18 +719,18 @@ public class BetaAuto extends OpMode {
                 break;
         }
     }
-    //TODO work still in progress
+
     public void mountain() {
         switch (currentStep) {
             case IDLE:
                 break;
             case DELAY:
-                if (!delay((double)delayTime)) {
+                if (!delay(delayTime)) {
                     currentStep = autoStep.FORWARD_1;
                 }
                 break;
             case FORWARD_1: //leave spawn
-                if (!moveDistance(12.0, 0.3)) {
+                if (!moveDistance(18.0, 0.3)) {
                     currentStep = autoStep.TURN_1;
                 }
                 break;
@@ -891,6 +746,7 @@ public class BetaAuto extends OpMode {
                 }
                 break;
             case FORWARD_2:
+                // TODO
                 if (startNearMountain) {
                     if (!moveDistance(22.32, 0.3)) {
                         currentStep = autoStep.TURN_2;
@@ -924,75 +780,23 @@ public class BetaAuto extends OpMode {
                 }
                 break;
             case STOP:
-                //teleopMode();
                 break;
         }
     }
 
     public void test() {
         switch (currentStep) {
-            case IDLE:
-                break;
             case DELAY:
-                if (true) {
-                    currentStep = autoStep.FORWARD_1;
-                }
+                if(!delay(delayTime)) currentStep = autoStep.FOLLOW_LINE;
                 break;
-            case FORWARD_1:
-                if (!moveDistance(12, 0.3)) { //moves 2ft
-                    currentStep = autoStep.FORWARD_2;
-                }
-                break;
-            case FORWARD_2:
-                if (!moveDistance(-12, 0.3)) {
-                    currentStep = autoStep.TURN_1;
-                }
-                break;
-            case TURN_1:
-                if(!gyroTurn(90)) {
-                    currentStep = autoStep.TURN_2;
-                }
-                break;
-            case TURN_2:
-                if(!gyroTurn(-90)) {
-                    currentStep = autoStep.STOP;
-                }
-                break;
-            case STOP:
-                //teleopMode();
-                break;
-        }
-    }
-
-    public void testServo() {
-        switch (currentStep) {
-            case DELAY:
-                currentStep = autoStep.FORWARD_1;
-                break;
-            case FORWARD_1:
-                fingerLeft.setPosition(0);
-                currentStep = autoStep.FORWARD_2;
-
-                break;
-            case FORWARD_2:
-                fingerLeft.setPosition(0.3);
-                currentStep = autoStep.STOP;
-
-                break;
-            case TURN_1:
-                fingerLeft.setPosition(0);
-                currentStep = autoStep.TURN_2;
-
-                break;
-            case TURN_2:
-                fingerLeft.setPosition(0.7);
-                currentStep = autoStep.STOP;
-
+            case FOLLOW_LINE:
+                if(!lineFollower()) currentStep = autoStep.STOP;
                 break;
             case STOP:
                 break;
         }
     }
+
     //
     // This method is called when the OpMode is stopped.
     //
