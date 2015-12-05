@@ -94,6 +94,8 @@ public class TeleOp7641 extends OpMode{
 
         zipServo.setPosition(ZIP_CLOSED);
         zipPosition = ZIP_CLOSED;
+        personDropperServo.setPosition(0.8);
+        personPosition =  0.8;
 
     }
 	@Override
@@ -110,13 +112,18 @@ public class TeleOp7641 extends OpMode{
             zipPosition = (zipPosition != ZIP_CLOSED) ? ZIP_CLOSED : ZIP_OPEN;
         }
 
-        if (gamepad2.dpad_up == true){
-            zipPosition += 0.1;
-        }
-        if (gamepad2.dpad_down == true){
-            zipPosition -= 0.1;
+        oldX = gamepad2.x;
+        if (gamepad2.right_trigger > 0) {
+            personPosition = gamepad2.right_trigger;
         }
 
+        if (personPosition < 0.0) {
+            personPosition = 0.0;
+        }
+
+        if (personPosition > 0.8) {
+            personPosition = 0.8;
+        }
         // tank drive
         // note that if y equal -1 then joystick is pushed all of the way forward.
         float left = -gamepad1.left_stick_y;
@@ -166,11 +173,8 @@ public class TeleOp7641 extends OpMode{
 		 */
         // telemetry.addData("distance", "Distance Travelled : " + String.format("%.2f", encoder*2240*6*3.14) + "inches");
         telemetry.addData("zip","Zip position " + zipServo.getPosition());
+        telemetry.addData("person","dropper position " + personDropperServo.getPosition());
 
-        if (gamepad1.x && !oldX) {
-            zipPosition = (zipPosition != ZIP_CLOSED) ? ZIP_CLOSED : ZIP_OPEN;
-        }
-        oldX = gamepad2.x;
     }
 
 	/*
