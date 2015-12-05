@@ -45,8 +45,7 @@ public class TeleOp7641 extends OpMode{
 	DcMotor motorRightSecondary;
 	DcMotor motorLeftPrimary;
 	DcMotor motorLeftSecondary;
-    double variableSpeed = 1.00 ;
-    float encoder = motorRightPrimary.getCurrentPosition();
+
 
 	/**
 	 * Constructor
@@ -84,7 +83,6 @@ public class TeleOp7641 extends OpMode{
 	 */
 	@Override
 	public void loop() {
-
 		/*
 		 * Gamepad 1
 		 * 
@@ -115,37 +113,21 @@ public class TeleOp7641 extends OpMode{
 		//--------------------------------------------------------------------
 
 
-        //Add limits to variable speed
-        if (variableSpeed > 1) {
-            variableSpeed = 1;
-        }
-        if (variableSpeed < 0.20 ) {
-            variableSpeed = 0.20;
+
+        // On left trigger push, turn left
+        if (gamepad1.left_trigger > 0) {
+            motorRightPrimary.setPower(gamepad1.left_trigger);
+            motorRightSecondary.setPower(gamepad1.left_trigger);
+			motorLeftPrimary.setPower(-gamepad1.left_trigger);
+			motorLeftSecondary.setPower(-gamepad1.left_trigger);
         }
 
-        //Make it so gamepad up and down add to or decrease variablespeed
-
-        if (gamepad1.dpad_up == true) {
-            variableSpeed = variableSpeed + 0.20;
-        }
-        if (gamepad1.dpad_down == true) {
-            variableSpeed = variableSpeed - 0.20;
-        }
-
-        // On left bumper push, turn left
-        if (gamepad1.left_bumper == true) {
-            motorRightPrimary.setPower(variableSpeed);
-            motorRightSecondary.setPower(variableSpeed);
-			motorLeftPrimary.setPower(-variableSpeed);
-			motorLeftSecondary.setPower(-variableSpeed);
-        }
-
-		// On right bumper push, turn right
-		if (gamepad1.right_bumper == true) {
-			motorRightPrimary.setPower(-variableSpeed);
-			motorRightSecondary.setPower(-variableSpeed);
-			motorLeftPrimary.setPower(variableSpeed);
-			motorLeftSecondary.setPower(variableSpeed);
+		// On right trigger push, turn right
+		if (gamepad1.right_trigger > 0) {
+			motorRightPrimary.setPower(-gamepad1.right_trigger);
+			motorRightSecondary.setPower(-gamepad1.right_trigger);
+			motorLeftPrimary.setPower(gamepad1.right_trigger);
+			motorLeftSecondary.setPower(gamepad1.right_trigger);
 		}
 
 
@@ -155,8 +137,7 @@ public class TeleOp7641 extends OpMode{
 		 * will return a null value. The legacy NXT-compatible motor controllers
 		 * are currently write only.
 		 */
-        telemetry.addData("distance", "Distance Travelled : " + String.format("%.2f", encoder*2240*6*3.14) + "inches");
-        telemetry.addData("variableSpeed", "Variable Speed Setting: " + String.format("%.2f", variableSpeed));
+        // telemetry.addData("distance", "Distance Travelled : " + String.format("%.2f", encoder*2240*6*3.14) + "inches");
 
     }
 
