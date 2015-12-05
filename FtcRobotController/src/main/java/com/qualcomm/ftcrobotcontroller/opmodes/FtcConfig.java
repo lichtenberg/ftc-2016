@@ -73,38 +73,6 @@ public class FtcConfig {
         gamepad2IsOK=true;
         //context=hardwareMap.appContext;
 
-        // read configuration data from file
-        /* commented out because it caused an exception, and the code is not needed
-        try {
-            InputStream inputStream = context.openFileInput(configFileName);
-
-            if ( inputStream != null ) {
-                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
-                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-
-                param.colorIsRed = Boolean.valueOf(bufferedReader.readLine());
-                param.delayInSec = Integer.valueOf(bufferedReader.readLine());
-                String autonTypeString = bufferedReader.readLine();
-                for (AutonType a : AutonType.values()) {
-                    if (a.name().equals(autonTypeString)) {
-                        param.autonType = a;
-                    }
-                }
-
-                inputStream.close();
-            }
-        }
-        catch (Exception e) {
-            opMode.telemetry.addData("Exception", "Error reading config file: " + e.toString());
-            // can't read from file, so initialize to reasonable values
-            param.colorIsRed=true;
-            param.delayInSec=0;
-            param.autonType= AutonType.GO_FOR_BEACON;
-
-            param.startNearMountain = false;
-        }
-        */
-
         // instead declare defaults here
         param.colorIsRed=true;
         param.delayInSec=0;

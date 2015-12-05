@@ -14,8 +14,9 @@ import java.lang.Object;
 /*
 // A program stripped down to its bare minimum
 // to reduce clutter and simplify hardwareMap config
+// only uses what is actually needed
+// Copy and paste the commented template
 public class BetaTest extends OpMode {
-    //@see com.qualcomm.robotcore.eventloop.opmode.OpMode#start()
 
     public void init() {
 
@@ -25,19 +26,59 @@ public class BetaTest extends OpMode {
 
     }
 
+    public void start() {
+
+    }
+
     public void loop() {
 
     }
 }
  */
-// A program stripped down to its bare minimum
-// to reduce clutter and simplify hardwareMap config
+//@see com.qualcomm.robotcore.eventloop.opmode.OpMode#start()
+
 public class BetaTest extends OpMode {
-    //@see com.qualcomm.robotcore.eventloop.opmode.OpMode#start()
+    Servo personDropper;
+    Boolean delayIsRunning = false;
+    double startDelayTime;
+    double stopDelayTime;
+
+    public void init() {
+        personDropper = hardwareMap.servo.get("servo-person");
+    }
+
+    public void init_loop() {
+
+    }
+
+    public void loop() {
+        telemetry.addData("personDropper pos: ", personDropper.getPosition());
+        personDropper.setPosition(0);
+        delay(0.1);
+        personDropper.setPosition(1);
+        delay(0.1);
+    }
+
+    protected Boolean delay(double secs) {
+        if (delayIsRunning) {
+            if (startDelayTime >= stopDelayTime) {
+                delayIsRunning = false;
+            }
+        } else {
+            startDelayTime = time;
+            stopDelayTime = time + secs;
+            delayIsRunning = true;
+        }
+        return delayIsRunning;
+    }
+}
+
+/*
+
 
     Servo fingerLeft;
 
-    Boolean delayIsRunning;
+    Boolean delayIsRunning = false;
     double startDelayTime;
     double stopDelayTime;
 
@@ -51,6 +92,7 @@ public class BetaTest extends OpMode {
 
     public void loop() {
         telemetry.addData("random stuff", fingerLeft.getPosition());
+        telemetry.addData("time: ", time);
         test();
     }
 
@@ -83,8 +125,8 @@ public class BetaTest extends OpMode {
     }
     //com.qualcomm.robotcore.util.ElapsedTime();
     public void test(){
-        fingerLeft.setPosition(0);
-        delay(0.2);
+        //fingerLeft.setPosition(0);
+        //delay(0.2);
         fingerLeft.setPosition(0.3);
         delay(0.2);
         fingerLeft.setPosition(0);
@@ -93,39 +135,9 @@ public class BetaTest extends OpMode {
         delay(0.2);
         fingerLeft.setPosition(0);
     }
-    public void testServo() {
-
-        switch (currentStep) {
-            case IDLE:
-                currentStep = autoStep.FORWARD_1;
-                break;
-            case DELAY:
-            case FORWARD_1:
-                fingerLeft.setPosition(0);
-                currentStep = autoStep.FORWARD_2;
-
-                break;
-            case FORWARD_2:
-                fingerLeft.setPosition(0.3);
-                currentStep = autoStep.STOP;
-
-                break;
-            case TURN_1:
-                fingerLeft.setPosition(0);
-                currentStep = autoStep.TURN_2;
-
-                break;
-            case TURN_2:
-                fingerLeft.setPosition(0.7);
-                currentStep = autoStep.STOP;
-
-                break;
-            case STOP:
-                break;
-        }
-    }
-
 }
+
+ */
 
 /*
     /*
