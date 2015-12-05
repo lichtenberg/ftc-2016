@@ -265,7 +265,7 @@ public class BetaAuto extends OpMode {
             int lineSensor = colorSensorL.alpha(); // Get the amount of light detected by the sensor as an int
             //int lineSensor = distanceSensor.getLightDetectedRaw(); // Get the amount of light detected by the sensor as an int
 
-            if (lineSensor > (blackBaseLine + 50)) {
+            if (lineSensor > (blackBaseLine + 2)) { // TODO change this value
                 if (!lineDetected) {
                     DbgLog.msg("LINE_FOLLOW:  Detected the line");
                     int distanceInEncoderCounts = inchesToEncoder(18);
@@ -312,7 +312,7 @@ public class BetaAuto extends OpMode {
                         fingerRight.setPosition(BUTTON_PRESSED);
                     }
                 }
-                if (lineSensor > (blackBaseLine + 50)) { // light detected
+                if (lineSensor > (blackBaseLine + 2)) { // light detected
                     lineDetected = true;
                     motorFrontLeft.setPower(0);
                     motorFrontRight.setPower(0.10);
