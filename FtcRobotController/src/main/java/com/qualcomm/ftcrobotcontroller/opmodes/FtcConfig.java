@@ -29,6 +29,7 @@ public class FtcConfig {
         DELAY,
         AUTON_TYPE,
         START_NEAR_MTN,
+        PUSH_BUTTON,
         READY;
         private static ConfigStep[] vals = values();
         public ConfigStep next() { return vals[(this.ordinal()+1) % vals.length];}
@@ -40,6 +41,7 @@ public class FtcConfig {
         int delayInSec;
         AutonType autonType;
         boolean startNearMountain;
+        boolean pushButton;
     }
 
     public enum AutonType {
@@ -76,7 +78,8 @@ public class FtcConfig {
         // instead declare defaults here
         param.colorIsRed=true;
         param.delayInSec=0;
-        param.autonType= AutonType.TEST;
+        param.autonType=AutonType.TEST;
+        param.pushButton=true;
 
         param.startNearMountain = false;
 
@@ -199,27 +202,25 @@ public class FtcConfig {
             }
         }
 
+        currConfigStepCheck = ConfigStep.PUSH_BUTTON;
+        if (configStepState.ordinal() >= currConfigStepCheck.ordinal()) {
+            opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "Push the button: " + param.startNearMountain);
+        }
+        // configure this parameter
+        if (configStepState == currConfigStepCheck) {
+            opMode.telemetry.addData("C" + configStepState.ordinal() + "A", "Push Y for TRUE, A for FALSE");
+            if (y1 && !lastY1) {
+                param.pushButton = true;
+            }
+            if (a1 && !lastA1) {
+                param.pushButton = false;
+            }
+        }
+
         currConfigStepCheck = ConfigStep.READY;
         // message to driver about state of this config parameter
         if (configStepState.ordinal() >= currConfigStepCheck.ordinal() ) {
             opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "READY TO GO!");
-
-            // may want to write configuration parameters to a file here if they are needed for teleop too!
-            /* commented out because it caused an exception, and the code is not needed
-            try {
-                OutputStreamWriter outputStreamWriter = new OutputStreamWriter(context.openFileOutput(configFileName, Context.MODE_PRIVATE));
-
-                // write each configuration parameter as a string on its own line
-                outputStreamWriter.write(Boolean.toString(param.colorIsRed)+"\n");
-                outputStreamWriter.write(Integer.toString(param.delayInSec)+"\n");
-                outputStreamWriter.write(param.autonType.name()+"\n");
-
-                outputStreamWriter.close();
-            }
-            catch (IOException e) {
-                opMode.telemetry.addData("Exception", "Configuration file write failed: " + e.toString());
-            }
-            */
         }
 
         if (/*configStepState != ConfigStep.READY*/true) {

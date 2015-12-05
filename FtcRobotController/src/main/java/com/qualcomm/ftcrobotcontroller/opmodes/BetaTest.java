@@ -38,6 +38,26 @@ public class BetaTest extends OpMode {
 //@see com.qualcomm.robotcore.eventloop.opmode.OpMode#start()
 
 public class BetaTest extends OpMode {
+
+    public void init() {
+
+    }
+
+    public void init_loop() {
+
+    }
+
+    public void start() {
+
+    }
+
+    public void loop() {
+
+    }
+}
+
+//personDropper test
+/*
     Servo personDropper;
     Boolean delayIsRunning = false;
     double startDelayTime;
@@ -71,8 +91,8 @@ public class BetaTest extends OpMode {
         }
         return delayIsRunning;
     }
-}
 
+ */
 /*
 
 
