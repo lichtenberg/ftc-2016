@@ -11,10 +11,7 @@ import com.qualcomm.robotcore.hardware.OpticalDistanceSensor;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.Range;
 
-
-
-
-public class MitchAuto1 extends OpMode {
+public class SAuto7641 extends OpMode {
 
 	FtcConfig ftcConfig = new FtcConfig();
 
@@ -27,18 +24,18 @@ public class MitchAuto1 extends OpMode {
 
 	DcMotor motorRight;
 	DcMotor motorLeft;
-	ColorSensor colorSensor;
+	ColorSensor colorSensor1;
+	ColorSensor colorSensor2;
 	OpticalDistanceSensor distanceSensor;
 	I2cDevice gyro;
     TouchSensor touchSensor;
 
-
     //
-    // The member variables below are used for when we are executing a turn.
-    //
+	// The member variables below are used for when we are executing a turn.
+	//
 	int destHeading;
 	Boolean gyroTurnIsRunning = false;
-    ModernGyroReader gyroReader;
+	ModernGyroReader gyroReader;
 
     //
     // The member variables below are used when we are following a line.
@@ -47,7 +44,6 @@ public class MitchAuto1 extends OpMode {
     int blackBaseLine = 0;
 	Boolean lineDetected = false;
 	Boolean lineFollowerIsRunning = false;
-	double lineStartTime = 0;
 
 
     //
@@ -58,7 +54,6 @@ public class MitchAuto1 extends OpMode {
     double encoderCountsPerRevolution = 1120; // This is the number of encoder counts per turn of the output shaft
 
 	Boolean moveDistanceIsRunning = false;
-	int moveDistanceDelay = 0;
 
     //
     // The member variables below are for holding the current "state" of our program.
@@ -71,8 +66,6 @@ public class MitchAuto1 extends OpMode {
 		TURN_1,
 		TURN_2,
 		FORWARD_2,
-		LINEFOLLOW,
-		REVERSE_1,
 		STOP
 	};
 
@@ -83,7 +76,7 @@ public class MitchAuto1 extends OpMode {
 	/**
 	 * Constructor
 	 */
-	public MitchAuto1() {
+	public SAuto7641() {
 
 	}
 
@@ -105,8 +98,8 @@ public class MitchAuto1 extends OpMode {
 		/*
 		 *   Gather motors out of the hardware map.
 		 */
-		motorRight = hardwareMap.dcMotor.get("moto2");
-		motorLeft = hardwareMap.dcMotor.get("moto1");
+		motorRight = hardwareMap.dcMotor.get("motor_2");
+		motorLeft = hardwareMap.dcMotor.get("motor_1");
 		motorRight.setDirection(DcMotor.Direction.REVERSE);
 
 
@@ -114,7 +107,8 @@ public class MitchAuto1 extends OpMode {
          * Gather the sensors out of the hardware map.
          */
 
-		colorSensor = hardwareMap.colorSensor.get("color1");
+		colorSensor1 = hardwareMap.colorSensor.get("color1");
+		colorSensor2 = hardwareMap.colorSensor.get("color2");
 		distanceSensor = hardwareMap.opticalDistanceSensor.get("dist1");
 
         /*
@@ -129,11 +123,15 @@ public class MitchAuto1 extends OpMode {
 
         touchSensor = hardwareMap.touchSensor.get("touch1");
 
+
+		colorSensor2.setI2cAddress(0x3e);
         /*
          * Set up the color sensor.
          */
+		colorSensor1.enableLed(false);
+		colorSensor2.enableLed(true);
 
-		colorSensor.enableLed(true);
+
 
 	}
 
@@ -258,8 +256,6 @@ public class MitchAuto1 extends OpMode {
 
 		telemetry.clearData();
 
-		motorLeft.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
-		motorRight.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
 
 		// Set the current autonomous step to our first step, FORWARD_1.
 
@@ -340,7 +336,7 @@ public class MitchAuto1 extends OpMode {
 			// just in case we miss the line entirely and slam into the wall.
 			//
 
-			if (touchSensor.isPressed() || (time > (lineStartTime + 10))) {
+			if (touchSensor.isPressed()) {
 				DbgLog.msg("LINE_FOLLOW:  touch sensor activated, stopping");
 
 				motorLeft.setPower(0);
@@ -350,7 +346,6 @@ public class MitchAuto1 extends OpMode {
 
 		} else {
 			lineFollowerIsRunning = true;
-			lineStartTime = time;
 		}
 
 		return lineFollowerIsRunning;
@@ -377,8 +372,8 @@ public class MitchAuto1 extends OpMode {
 			//double turnSpeed = 0.10;
 			//double slowTurnSpeed = 0.04;
 
-			double turnSpeed = 0.15;
-			double slowTurnSpeed = 0.08;
+			double turnSpeed = 0.20;
+			double slowTurnSpeed = 0.10;
 
 			if (degreesToTurn > 0) {
 				shouldTurnLeft = true;
@@ -432,8 +427,7 @@ public class MitchAuto1 extends OpMode {
 		// The return value of this routine is 'true' if we are still busy.
 
 		if (moveDistanceIsRunning) {
-			moveDistanceDelay++;
-			if ((moveDistanceDelay > 50) && !motorLeft.isBusy() && !motorRight.isBusy()) {
+			if (!motorLeft.isBusy() && motorRight.isBusy()) {
 				motorLeft.setPower(0);
 				motorRight.setPower(0);
 				motorLeft.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
@@ -458,8 +452,6 @@ public class MitchAuto1 extends OpMode {
 			motorLeft.setPower(motorPower);
 			motorRight.setPower(motorPower);
 
-
-			moveDistanceDelay = 0;
 			moveDistanceIsRunning = true;
 		}
 
@@ -489,8 +481,6 @@ public class MitchAuto1 extends OpMode {
 
 		gyroReader.checkGyro();
 
-		int turn = (ftcConfig.param.colorIsRed ? -45 : 45);
-
 		//
 		// Based on the current step in our autonomous program, decide what to do.
 		//
@@ -505,13 +495,13 @@ public class MitchAuto1 extends OpMode {
 			case IDLE:
 				break;
 			case FORWARD_1:
-				if (moveDistance(6, 0.3) == false) {
+				if (moveDistance(12.0, 0.3) == false) {
 					currentStep = autoStep.TURN_1;
 				}
 				break;
 			case TURN_1:
-				if (gyroTurn(turn) == false) {
-					currentStep = autoStep.FORWARD_2;
+				if (gyroTurn(90) == false) {
+					currentStep = autoStep.TURN_2;
 				}
 				break;
 			case TURN_2:
@@ -520,19 +510,10 @@ public class MitchAuto1 extends OpMode {
 				}
 				break;
 			case FORWARD_2:
-				if (moveDistance(6*12, 0.5) == false) {
-					currentStep = autoStep.LINEFOLLOW;
-				}
-				break;
-			case LINEFOLLOW:
-				if (lineFollower() == false) {
-					currentStep = autoStep.REVERSE_1;
-				}
-				break;
-			case REVERSE_1:
-				if (moveDistance(-12, 0.3) == false) {
+				if (moveDistance(12.0, 0.3) == false) {
 					currentStep = autoStep.STOP;
 				}
+				break;
 			case STOP:
 				teleopMode();
 				break;
@@ -541,14 +522,15 @@ public class MitchAuto1 extends OpMode {
 
 
 
-		/*
-		 * Send telemetry data back to driver station.
-		 */
+      /*
+       * Send telemetry data back to driver station.
+       */
 
 		//telemetry.addData("Text", "*** Robot Data***");
 		//telemetry.addData("Time", String.format("%f", this.time));
 
-		telemetry.addData("Color:", "A:" + colorSensor.alpha() + " R:" + colorSensor.red() + " G:" + colorSensor.green() + " B:" + colorSensor.blue());
+		telemetry.addData("Color1:", "A:" + colorSensor1.alpha() + " R:" + colorSensor1.red() + " G:" + colorSensor1.green() + " B:" + colorSensor1.blue());
+		telemetry.addData("Color2:", "A:" + colorSensor2.alpha() + " R:" + colorSensor2.red() + " G:" + colorSensor2.green() + " B:" + colorSensor2.blue());
 		telemetry.addData("OptDist", distanceSensor.getLightDetectedRaw());
 		telemetry.addData("baseline", blackBaseLine + (lineDetected ? " line" : " no line"));
 		telemetry.addData("heading", gyroReader.getHeading());
@@ -559,6 +541,29 @@ public class MitchAuto1 extends OpMode {
 		telemetry.addData("DelayInSec", Integer.toString(ftcConfig.param.delayInSec));
 		telemetry.addData("AutonType", ftcConfig.param.autonType);
 
+		telemetry.addData("BeaconValue",detectBeacon());
+
+
+	}
+	public int detectBeacon() {
+		// lower limit below red and blue are meaningful
+		int threshold = 0;
+
+		telemetry.addData("Color:", "A:" + colorSensor1.alpha() + " R:" + colorSensor1.red() + " G:" + colorSensor1.green() + " B:" + colorSensor1.blue());
+		DbgLog.msg("Color: A: " + colorSensor1.alpha() + " R: " + colorSensor1.red() + " G: " + colorSensor1.green() + " B: " + colorSensor1.blue());
+
+		if (colorSensor1.red() < threshold || colorSensor1.blue() < threshold){
+			return 0;
+		}
+		else if (colorSensor1.red() > colorSensor1.blue() ){
+			return 1;
+
+		}
+		else if (colorSensor1.blue() > colorSensor1.red() ){
+			return -1;
+		}
+		else
+			return 0;
 
 	}
 
@@ -570,19 +575,19 @@ public class MitchAuto1 extends OpMode {
 	public void stop() {
 
 	}
-	
+
 	/*
-	 * This method scales the joystick input so for low joystick values, the 
-	 * scaled value is less than linear.  This is to make it easier to drive
-	 * the robot more precisely at slower speeds.
-	 */
+        * This method scales the joystick input so for low joystick values, the
+        * scaled value is less than linear.  This is to make it easier to drive
+        * the robot more precisely at slower speeds.
+        */
 	double scaleInput(double dVal)  {
 		double[] scaleArray = { 0.0, 0.05, 0.09, 0.10, 0.12, 0.15, 0.18, 0.24,
 				0.30, 0.36, 0.43, 0.50, 0.60, 0.72, 0.85, 1.00, 1.00 };
-		
+
 		// get the corresponding index for the scaleInput array.
 		int index = (int) (dVal * 16.0);
-		
+
 		// index should be positive.
 		if (index < 0) {
 			index = -index;
