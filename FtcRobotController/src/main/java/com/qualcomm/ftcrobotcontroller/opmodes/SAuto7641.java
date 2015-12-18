@@ -8,6 +8,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorController.RunMode;
 import com.qualcomm.robotcore.hardware.I2cDevice;
 import com.qualcomm.robotcore.hardware.OpticalDistanceSensor;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.Range;
 
@@ -29,7 +30,18 @@ public class SAuto7641 extends OpMode {
 	OpticalDistanceSensor distanceSensor;
 	I2cDevice gyro;
     TouchSensor touchSensor;
+	Servo fingerLeft;
+	Servo fingerRight;
+	ColorSensor colorSensorB;
 
+	boolean pushButton;
+	boolean isRed;
+
+	//
+	// The member variables used in servos
+	//
+	final static double BUTTON_PRESSED = 0.0;
+	final static double BUTTON_NOTPRESSED = 0.6;
     //
 	// The member variables below are used for when we are executing a turn.
 	//
@@ -45,8 +57,16 @@ public class SAuto7641 extends OpMode {
 	Boolean lineDetected = false;
 	Boolean lineFollowerIsRunning = false;
 
+	//
+	// The member variables below are used when we are detecting the beacon and pushing the button.
+	//
+	boolean beaconLeftIsBlue = false;
+	int detectBlueStreak = 0;
+	int detectRedStreak = 0;
 
-    //
+
+
+	//
     // The member variables below describe the drive train of the motor
     //
     double wheelDiameter = 2.75;     // Wheel diameter in inches
@@ -98,10 +118,14 @@ public class SAuto7641 extends OpMode {
 		/*
 		 *   Gather motors out of the hardware map.
 		 */
-		motorRight = hardwareMap.dcMotor.get("motor_2");
-		motorLeft = hardwareMap.dcMotor.get("motor_1");
+		motorRight = hardwareMap.dcMotor.get("motor-fl");
+		motorLeft = hardwareMap.dcMotor.get("motor-fr");
 		motorRight.setDirection(DcMotor.Direction.REVERSE);
 
+		fingerRight = hardwareMap.servo.get("servo-right");
+		fingerLeft = hardwareMap.servo.get("servo-left");
+		fingerRight.setDirection(Servo.Direction.FORWARD);
+		fingerLeft.setDirection(Servo.Direction.REVERSE);
 
         /*
          * Gather the sensors out of the hardware map.
@@ -352,6 +376,66 @@ public class SAuto7641 extends OpMode {
 
 		return lineFollowerIsRunning;
 
+	}
+
+	public void pushTheButton() {
+		// Determines if the robot should push the left button or the right one
+		// and extends the corresponding finger
+		if (ifPushLeftButton() && pushButton) {
+			if (fingerLeft.getPosition() > 0.55) {
+				fingerLeft.setPosition(BUTTON_PRESSED);
+			}
+			if (fingerRight.getPosition() < 0.05) {
+				fingerRight.setPosition(BUTTON_NOTPRESSED);
+			}
+		} else if (!ifPushLeftButton() && pushButton){
+			if (fingerLeft.getPosition() < 0.05) {
+				fingerLeft.setPosition(BUTTON_NOTPRESSED);
+			}
+			if (fingerRight.getPosition() > 0.55) {
+				fingerRight.setPosition(BUTTON_PRESSED);
+			}
+		} else {
+			fingerLeft.setPosition(BUTTON_NOTPRESSED);
+			fingerRight.setPosition(BUTTON_NOTPRESSED);
+		}
+	}
+
+	public boolean ifPushLeftButton() {
+		if (colorSensorB.blue() > 1) { // if a blue is detected
+			// resets the red streak when a blue is initially detected
+			if (detectBlueStreak == 0) detectRedStreak = 0;
+			// u should know this...
+			detectBlueStreak++;
+			// if there is less than 10 red detections within the 25 blue detection streak
+			// the code is sure the detection is really blue.
+			if (detectBlueStreak > 50) {
+				if (detectRedStreak < 20) {
+					// determines that the beaconLeft is really blue, and resets the red streak
+					detectRedStreak = 0;
+					beaconLeftIsBlue = true;
+				}
+				if (detectRedStreak >= 20) {
+					// resets both streaks and start over when there is too much red in the blue streak
+					detectBlueStreak = 0;
+					detectRedStreak = 0;
+				}
+			}
+		} else {
+			if (detectRedStreak == 0) detectBlueStreak = 0;
+			detectRedStreak++;
+			if (detectRedStreak > 50){
+				if (detectBlueStreak < 20) {
+					detectBlueStreak = 0;
+					beaconLeftIsBlue = false;
+				}
+				if (detectBlueStreak >= 20) {
+					detectBlueStreak = 0;
+					detectRedStreak = 0;
+				}
+			}
+		}
+		return !(beaconLeftIsBlue ^ !isRed); // check if the left beacon matches the team color (NOT(XOR))
 	}
 
 
