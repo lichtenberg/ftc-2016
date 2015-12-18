@@ -141,7 +141,10 @@ public class BogieTankDrive extends OpMode {
 
 		//telemetry.addData("Text", "*** Robot Data***");
 		telemetry.addData("Time",String.format("%f",this.time));
-        //telemetry.addData("arm", "arm:  " + String.format("%.2f", armPosition));
+		telemetry.addData("Left",String.format("%d/%d",motorFrontLeft.getCurrentPosition(),motorRearLeft.getCurrentPosition()));
+		telemetry.addData("Right",String.format("%d/%d",motorFrontRight.getCurrentPosition(),motorRearLeft.getCurrentPosition()));
+
+		//telemetry.addData("arm", "arm:  " + String.format("%.2f", armPosition));
         //telemetry.addData("claw", "claw:  " + String.format("%.2f", clawPosition));
 
 	}
