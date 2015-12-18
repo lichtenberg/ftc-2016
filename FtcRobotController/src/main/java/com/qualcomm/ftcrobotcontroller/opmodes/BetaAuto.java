@@ -112,8 +112,8 @@ public class BetaAuto extends OpMode {
         motorFrontLeft = hardwareMap.dcMotor.get("motor-fl");
         motorBackRight = hardwareMap.dcMotor.get("motor-br");
         motorBackLeft = hardwareMap.dcMotor.get("motor-bl");
-        motorFrontRight.setDirection(DcMotor.Direction.REVERSE);
-        motorBackLeft.setDirection(DcMotor.Direction.REVERSE);
+        motorFrontLeft.setDirection(DcMotor.Direction.REVERSE);
+        motorBackRight.setDirection(DcMotor.Direction.REVERSE);
 
         /*
          * Servos
@@ -616,6 +616,7 @@ public class BetaAuto extends OpMode {
         // Do not change to switch statement
         // Or "case ftcConfig.param.autonType.* " will be red lines
 
+        /*
         if (autonType == FtcConfig.AutonType.GO_FOR_BEACON) {
             beacon();
         } else if (autonType == FtcConfig.AutonType.GO_FOR_MOUNTAIN) {
@@ -626,7 +627,8 @@ public class BetaAuto extends OpMode {
         } else if (autonType == FtcConfig.AutonType.TEST) { // ftcConfig.param.autonType.TEST will yield access via static message
             test();
         }
-
+        */
+        test();
         fingerRight.setDirection(Servo.Direction.FORWARD);
         fingerLeft.setDirection(Servo.Direction.REVERSE);
 
@@ -645,9 +647,21 @@ public class BetaAuto extends OpMode {
     // put everything that should have been in the loop method (the switch statement)
 
     public void test() {
-
+        switch (currentStep) {
+            case DELAY:
+                currentStep = autoStep.FORWARD_1;
+                break;
+            case FORWARD_1:
+                if (!moveDistance(12, 0.3)) currentStep = autoStep.STOP;
+                break;
+            case FOLLOW_LINE:
+                if (!lineFollower()) currentStep = autoStep.STOP;
+                break;
+            case STOP:
+                break;
+        }
     }
-    public void foo() {
+    public void testFoo() {
         switch (currentStep) {
             case DELAY:
                 currentStep = autoStep.FORWARD_1;

@@ -119,7 +119,7 @@ public class TeleOp7641 extends OpMode{
         else {
             personDropperServo.setPosition(0.8);
         }
-		
+
 		if (personPosition < 0.0) {
 			personPosition = 0.0;
 		}
