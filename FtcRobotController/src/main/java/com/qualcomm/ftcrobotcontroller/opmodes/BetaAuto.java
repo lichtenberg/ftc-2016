@@ -108,10 +108,10 @@ public class BetaAuto extends OpMode {
 		/*
 		 *   Gather motors out of the hardware map.
 		 */
-        motorFrontRight = hardwareMap.dcMotor.get("motor-1");
-        motorFrontLeft = hardwareMap.dcMotor.get("motor-2");
-        motorBackRight = hardwareMap.dcMotor.get("motor-3");
-        motorBackLeft = hardwareMap.dcMotor.get("motor-4");
+        motorFrontRight = hardwareMap.dcMotor.get("motor-fr");
+        motorFrontLeft = hardwareMap.dcMotor.get("motor-fl");
+        motorBackRight = hardwareMap.dcMotor.get("motor-br");
+        motorBackLeft = hardwareMap.dcMotor.get("motor-bl");
         motorFrontRight.setDirection(DcMotor.Direction.REVERSE);
         motorBackLeft.setDirection(DcMotor.Direction.REVERSE);
 
@@ -290,8 +290,8 @@ public class BetaAuto extends OpMode {
                 personDropper.setPosition(0);
                 //while(delay(0.1)) {}
                 personDropper.setPosition(0.8);
-                motorFrontRight.setMode(DcMotorController.RunMode.RUN_WITHOUT_ENCODERS);
-                motorFrontLeft.setMode(DcMotorController.RunMode.RUN_WITHOUT_ENCODERS);
+                //motorFrontRight.setMode(DcMotorController.RunMode.RUN_WITHOUT_ENCODERS);
+                //motorFrontLeft.setMode(DcMotorController.RunMode.RUN_WITHOUT_ENCODERS);
                 lineFollowerIsRunning = false;
             } else {
                 // Line has been detected.   If we see the line, turn one way.
@@ -312,8 +312,8 @@ public class BetaAuto extends OpMode {
                 }
             }
         } else {
-            motorFrontRight.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
-            motorFrontLeft.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
+            //motorFrontRight.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
+            //motorFrontLeft.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
             lineDetected = false;
             lineFollowerIsRunning = true;
         }
@@ -392,8 +392,8 @@ public class BetaAuto extends OpMode {
 
     public boolean gyroTurn(int howMuch) {
 
-        motorFrontRight.setMode(DcMotorController.RunMode.RUN_WITHOUT_ENCODERS);
-        motorFrontLeft.setMode(DcMotorController.RunMode.RUN_WITHOUT_ENCODERS);
+        //motorFrontRight.setMode(DcMotorController.RunMode.RUN_WITHOUT_ENCODERS);
+        //motorFrontLeft.setMode(DcMotorController.RunMode.RUN_WITHOUT_ENCODERS);
 
         // We update the gyro's currentHeading each time the loop is called.
         // It runs on its own, we query the current compass position by reading the
@@ -485,12 +485,12 @@ public class BetaAuto extends OpMode {
                 motorBackRight.setPower(0);
                 DbgLog.msg("MOVE_DISTANCE: finished");
                 moveDistanceIsRunning = false;
-                motorFrontRight.setMode(DcMotorController.RunMode.RUN_WITHOUT_ENCODERS);
-                motorFrontLeft.setMode(DcMotorController.RunMode.RUN_WITHOUT_ENCODERS);
+                //motorFrontRight.setMode(DcMotorController.RunMode.RUN_WITHOUT_ENCODERS);
+                //motorFrontLeft.setMode(DcMotorController.RunMode.RUN_WITHOUT_ENCODERS);
             }
         } else {
-            motorFrontRight.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
-            motorFrontLeft.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
+            //motorFrontRight.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
+            //motorFrontLeft.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
 
             int distanceInEncoderCounts = inchesToEncoder(distanceInInches);
 
@@ -632,7 +632,7 @@ public class BetaAuto extends OpMode {
 
         telemetry.addData("TIME ELAPSED: ", time);
         telemetry.addData("TIME LEFT", 30 - time);
-        telemetry.addData("enc: ", motorFrontLeft.getCurrentPosition() + " " + motorFrontRight.getCurrentPosition() + " " + motorFrontLeft.getTargetPosition());
+        telemetry.addData("enc: ", motorFrontLeft.getCurrentPosition() + " " + motorFrontRight.getCurrentPosition());
         telemetry.addData("mode", motorFrontLeft.getMode() + " " + motorFrontRight.getMode());
         telemetry.addData("gyro: ", " cur " + gyroReader.curHeading + " dest " + destHeading + " degsToTurn " + degreesToTurn);
         telemetry.addData("currentStep: ", currentStep);
@@ -645,12 +645,15 @@ public class BetaAuto extends OpMode {
     // put everything that should have been in the loop method (the switch statement)
 
     public void test() {
+
+    }
+    public void foo() {
         switch (currentStep) {
             case DELAY:
                 currentStep = autoStep.FORWARD_1;
                 break;
             case FORWARD_1:
-                if (!moveDistance(18, 0.3)) currentStep = autoStep.FOLLOW_LINE;
+                /*if (!moveDistance(18, 0.3))*/ currentStep = autoStep.FOLLOW_LINE;
                 break;
             case FOLLOW_LINE:
                 if (!lineFollower()) currentStep = autoStep.STOP;

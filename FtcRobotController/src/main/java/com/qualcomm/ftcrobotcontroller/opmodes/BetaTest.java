@@ -38,9 +38,17 @@ public class BetaTest extends OpMode {
 //@see com.qualcomm.robotcore.eventloop.opmode.OpMode#start()
 
 public class BetaTest extends OpMode {
-
+    DcMotor motorFrontRight;
+    DcMotor motorFrontLeft;
+    DcMotor motorBackRight;
+    DcMotor motorBackLeft;
     public void init() {
-
+        motorFrontRight = hardwareMap.dcMotor.get("motor-fr");
+        motorFrontLeft = hardwareMap.dcMotor.get("motor-fl");
+        motorBackRight = hardwareMap.dcMotor.get("motor-br");
+        motorBackLeft = hardwareMap.dcMotor.get("motor-bl");
+        motorFrontRight.setDirection(DcMotor.Direction.REVERSE);
+        motorBackLeft.setDirection(DcMotor.Direction.REVERSE);
     }
 
     public void init_loop() {
@@ -52,7 +60,8 @@ public class BetaTest extends OpMode {
     }
 
     public void loop() {
-
+        telemetry.addData("enc: ", motorFrontLeft.getCurrentPosition() + " " + motorFrontRight.getCurrentPosition());
+        telemetry.addData("mode", motorFrontLeft.getMode() + " " + motorFrontRight.getMode());
     }
 }
 

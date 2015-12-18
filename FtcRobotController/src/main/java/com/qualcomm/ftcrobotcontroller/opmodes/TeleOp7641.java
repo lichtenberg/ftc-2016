@@ -116,10 +116,13 @@ public class TeleOp7641 extends OpMode{
         if (gamepad2.right_trigger > 0) {
             personPosition = gamepad2.right_trigger;
         }
-
-        if (personPosition < 0.0) {
-            personPosition = 0.0;
+        else {
+            personDropperServo.setPosition(0.8);
         }
+
+		if (personPosition < 0.0) {
+			personPosition = 0.0;
+		}
 
         if (personPosition > 0.8) {
             personPosition = 0.8;
