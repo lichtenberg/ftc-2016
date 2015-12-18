@@ -130,6 +130,8 @@ public class SAuto7641 extends OpMode {
          */
 		colorSensor1.enableLed(false);
 		colorSensor2.enableLed(true);
+		colorSensor2.enableLed(false);
+		colorSensor2.enableLed(true);
 
 
 
