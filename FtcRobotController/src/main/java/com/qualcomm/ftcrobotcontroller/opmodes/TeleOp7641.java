@@ -116,20 +116,7 @@ public class TeleOp7641 extends OpMode{
             personDropperServo.setPosition(0.8);
         }
 
-<<<<<<< HEAD
-
-        if (personPosition < 0.0) {
-                personPosition = 0.0;
-        }
-=======
-		if (personPosition < 0.0) {
-			personPosition = 0.0;
-		}
->>>>>>> 30ded98b4fb1841d9e7cca6e2a01ca2381125bd8
-
-        if (personPosition > 0.8) {
-            personPosition = 0.8;
-        }
+        
         // tank drive
         // note that if y equal -1 then joystick is pushed all of the way forward.
         float left = -gamepad1.left_stick_y;
