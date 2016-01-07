@@ -478,7 +478,8 @@ public class BetaAuto extends OpMode {
         // The return value of this routine is 'true' if we are still busy.
 
         if (moveDistanceIsRunning) {
-            if ((motorFrontRight.getCurrentPosition() >= motorFrontRight.getTargetPosition() && distanceInInches > 0) || (motorFrontRight.getCurrentPosition() <= (motorFrontRight.getTargetPosition()) && distanceInInches < 0)){
+            if ((motorFrontRight.getCurrentPosition() >= motorFrontRight.getTargetPosition() && distanceInInches > 0)
+                    || (motorFrontRight.getCurrentPosition() <= (motorFrontRight.getTargetPosition()) && distanceInInches < 0)){
                 motorFrontLeft.setPower(0);
                 motorFrontRight.setPower(0);
                 motorBackLeft.setPower(0);

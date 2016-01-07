@@ -92,9 +92,6 @@ public class SAuto7641 extends OpMode {
 	};
 
 	autoStep currentStep = autoStep.IDLE;
-
-
-
 	/**
 	 * Constructor
 	 */
@@ -137,8 +134,8 @@ public class SAuto7641 extends OpMode {
          * Gather the sensors out of the hardware map.
          */
 
-		colorSensor1 = hardwareMap.colorSensor.get("color1");
-		colorSensor2 = hardwareMap.colorSensor.get("color2");
+		colorSensor1 = hardwareMap.colorSensor.get("color-front");
+		colorSensor2 = hardwareMap.colorSensor.get("color-bottom");
 		distanceSensor = hardwareMap.opticalDistanceSensor.get("dist1");
 
         /*
@@ -147,7 +144,7 @@ public class SAuto7641 extends OpMode {
          * of the dirty work of reading the heading out of the gyro.
          */
 
-		gyro = hardwareMap.i2cDevice.get("gyro1");
+		gyro = hardwareMap.i2cDevice.get("gyro-1");
 		gyroReader = new ModernGyroReader(gyro);
 
 
@@ -162,11 +159,7 @@ public class SAuto7641 extends OpMode {
 		colorSensor2.enableLed(true);
 		colorSensor2.enableLed(false);
 		colorSensor2.enableLed(true);
-
-
-
 	}
-
 
     //
     // normalizeHeading(heading)
@@ -535,13 +528,14 @@ public class SAuto7641 extends OpMode {
 
 		// The return value of this routine is 'true' if we are still busy.
 		if (moveDistanceIsRunning) {
-			if (!motorLeftPrimary.isBusy() && motorRightPrimary.isBusy()) {
+			if ((motorLeftPrimary.getCurrentPosition() >= motorLeftPrimary.getTargetPosition() && distanceInInches > 0)
+					|| (motorLeftPrimary.getCurrentPosition() <= (motorLeftPrimary.getTargetPosition()) && distanceInInches < 0)) {
 				motorLeftPrimary.setPower(0);
 				motorLeftSecondary.setPower(0);
 				motorRightPrimary.setPower(0);
 				motorRightSecondary.setPower(0);
-				motorLeftPrimary.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
-				motorRightPrimary.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
+				//motorLeftPrimary.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
+				//motorRightPrimary.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
 
 				DbgLog.msg("MOVE_DISTANCE: finished");
 
@@ -553,8 +547,8 @@ public class SAuto7641 extends OpMode {
 			DbgLog.msg("MOVE_DISTANCE: distance " + distanceInInches + " power " + motorPower);
 
 
-			motorLeftPrimary.setChannelMode(RunMode.RUN_TO_POSITION);
-			motorRightPrimary.setChannelMode(RunMode.RUN_TO_POSITION);;
+			//motorLeftPrimary.setChannelMode(RunMode.RUN_TO_POSITION);
+			//motorRightPrimary.setChannelMode(RunMode.RUN_TO_POSITION);;
 
 			motorLeftPrimary.setTargetPosition(motorLeftPrimary.getCurrentPosition() + distanceInEncoderCounts);
 			motorRightPrimary.setTargetPosition(motorRightPrimary.getCurrentPosition() + distanceInEncoderCounts);
