@@ -24,10 +24,6 @@ public class TeleOp7641 extends OpMode{
 	 * Also, as the claw servo approaches 0, the claw opens up (drops the game element).
 	 */
     // TETRIX VALUES.
-    final static double ARM_MIN_RANGE  = 0.20;
-    final static double ARM_MAX_RANGE  = 0.90;
-    final static double CLAW_MIN_RANGE  = 0.20;
-    final static double CLAW_MAX_RANGE  = 0.7;
     final static double ZIP_OPEN = 0.5;
     final static double ZIP_CLOSED = 1.0;
 
@@ -43,7 +39,6 @@ public class TeleOp7641 extends OpMode{
 	// amount to change the claw servo position by
 	double clawDelta = 0.1;
     Boolean oldX;
-
 	DcMotor motorRightPrimary;
 	DcMotor motorRightSecondary;
 	DcMotor motorLeftPrimary;
@@ -72,10 +67,10 @@ public class TeleOp7641 extends OpMode{
 		 * that the names of the devices must match the names used when you
 		 * configured your robot and created the configuration file.
 		 */
-		motorRightPrimary = hardwareMap.dcMotor.get("motor-1");
-		motorLeftPrimary = hardwareMap.dcMotor.get("motor-2");
-		motorRightSecondary = hardwareMap.dcMotor.get("motor-3");
-		motorLeftSecondary = hardwareMap.dcMotor.get("motor-4");
+		motorRightPrimary = hardwareMap.dcMotor.get("motor-fr");
+		motorLeftPrimary = hardwareMap.dcMotor.get("motor-br");
+		motorRightSecondary = hardwareMap.dcMotor.get("motor-fl");
+		motorLeftSecondary = hardwareMap.dcMotor.get("motor-bl");
         zipServo = hardwareMap.servo.get("servo-zip");
         personDropperServo = hardwareMap.servo.get("servo-person");
         oldX = false;
@@ -113,17 +108,18 @@ public class TeleOp7641 extends OpMode{
         }
 
         oldX = gamepad2.x;
-        if (gamepad2.right_trigger > 0) {
-            personPosition += gamepad2.right_trigger;
+
+        if (gamepad2.y == true) {
+            personPosition = 0.0;
         }
         else {
             personDropperServo.setPosition(0.8);
         }
 
 
-            if (personPosition < 0.0) {
+        if (personPosition < 0.0) {
                 personPosition = 0.0;
-            }
+        }
 
         if (personPosition > 0.8) {
             personPosition = 0.8;
