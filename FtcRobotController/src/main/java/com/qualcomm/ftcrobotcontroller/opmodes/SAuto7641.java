@@ -8,6 +8,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorController.RunMode;
 import com.qualcomm.robotcore.hardware.I2cDevice;
 import com.qualcomm.robotcore.hardware.OpticalDistanceSensor;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.Range;
 
@@ -22,14 +23,27 @@ public class SAuto7641 extends OpMode {
     // named on the robot controller using the "settings" and "scan" functions
     // of the robot controller app.
 
-	DcMotor motorRight;
-	DcMotor motorLeft;
+	DcMotor motorRightPrimary;
+	DcMotor motorRightSecondary;
+	DcMotor motorLeftPrimary;
+	DcMotor motorLeftSecondary;
 	ColorSensor colorSensor1;
 	ColorSensor colorSensor2;
 	OpticalDistanceSensor distanceSensor;
 	I2cDevice gyro;
     TouchSensor touchSensor;
+	Servo fingerLeft;
+	Servo fingerRight;
+	ColorSensor colorSensorB;
 
+	boolean pushButton;
+	boolean isRed;
+
+	//
+	// The member variables used in servos
+	//
+	final static double BUTTON_PRESSED = 0.0;
+	final static double BUTTON_NOTPRESSED = 0.6;
     //
 	// The member variables below are used for when we are executing a turn.
 	//
@@ -45,8 +59,16 @@ public class SAuto7641 extends OpMode {
 	Boolean lineDetected = false;
 	Boolean lineFollowerIsRunning = false;
 
+	//
+	// The member variables below are used when we are detecting the beacon and pushing the button.
+	//
+	boolean beaconLeftIsBlue = false;
+	int detectBlueStreak = 0;
+	int detectRedStreak = 0;
 
-    //
+
+
+	//
     // The member variables below describe the drive train of the motor
     //
     double wheelDiameter = 2.75;     // Wheel diameter in inches
@@ -98,10 +120,18 @@ public class SAuto7641 extends OpMode {
 		/*
 		 *   Gather motors out of the hardware map.
 		 */
-		motorRight = hardwareMap.dcMotor.get("motor_2");
-		motorLeft = hardwareMap.dcMotor.get("motor_1");
-		motorRight.setDirection(DcMotor.Direction.REVERSE);
+		motorRightPrimary = hardwareMap.dcMotor.get("motor-fr");
+		motorLeftPrimary = hardwareMap.dcMotor.get("motor-fl");
+		motorRightSecondary = hardwareMap.dcMotor.get("motor-br");
+		motorLeftSecondary = hardwareMap.dcMotor.get("motor-bl");
 
+		motorRightPrimary.setDirection(DcMotor.Direction.REVERSE);
+		motorLeftSecondary.setDirection(DcMotor.Direction.REVERSE);
+
+		fingerRight = hardwareMap.servo.get("servo-right");
+		fingerLeft = hardwareMap.servo.get("servo-left");
+		fingerRight.setDirection(Servo.Direction.FORWARD);
+		fingerLeft.setDirection(Servo.Direction.REVERSE);
 
         /*
          * Gather the sensors out of the hardware map.
@@ -129,6 +159,8 @@ public class SAuto7641 extends OpMode {
          * Set up the color sensor.
          */
 		colorSensor1.enableLed(false);
+		colorSensor2.enableLed(true);
+		colorSensor2.enableLed(false);
 		colorSensor2.enableLed(true);
 
 
@@ -282,8 +314,11 @@ public class SAuto7641 extends OpMode {
 		left = (float) scaleInput(left);
 
 		// write the values to the motors
-		motorRight.setPower(right);
-		motorLeft.setPower(left);
+		motorRightPrimary.setPower(right);
+		motorLeftPrimary.setPower(left);
+		motorRightSecondary.setPower(right);
+		motorLeftSecondary.setPower(left);
+
 	}
 
 
@@ -312,8 +347,10 @@ public class SAuto7641 extends OpMode {
 
 			if (!lineDetected) {
 				// Line not detected yet.   Keep going straight.
-				motorLeft.setPower(0.20);
-				motorRight.setPower(0.20);
+				motorLeftPrimary.setPower(0.20);
+				motorRightPrimary.setPower(0.20);
+				motorLeftSecondary.setPower(0.20);
+				motorRightSecondary.setPower(0.20);
 			} else {
 
 				// Line has been detected.   If we see the line, turn one way.
@@ -322,11 +359,15 @@ public class SAuto7641 extends OpMode {
 
 				if (lineSensor > (blackBaseLine + 50)) { // light detected
 					lineDetected = true;
-					motorLeft.setPower(0);
-					motorRight.setPower(0.15);
+					motorLeftPrimary.setPower(0);
+					motorRightPrimary.setPower(0.15);
+					motorLeftSecondary.setPower(0);
+					motorRightSecondary.setPower(0.15);
 				} else {
-					motorLeft.setPower(0.15);
-					motorRight.setPower(0);
+					motorLeftPrimary.setPower(0.15);
+					motorRightPrimary.setPower(0);
+					motorLeftSecondary.setPower(0.15);
+					motorRightSecondary.setPower(0);
 				}
 
 			}
@@ -339,8 +380,10 @@ public class SAuto7641 extends OpMode {
 			if (touchSensor.isPressed()) {
 				DbgLog.msg("LINE_FOLLOW:  touch sensor activated, stopping");
 
-				motorLeft.setPower(0);
-				motorRight.setPower(0);
+				motorLeftPrimary.setPower(0);
+				motorRightPrimary.setPower(0);
+				motorLeftSecondary.setPower(0);
+				motorRightSecondary.setPower(0);
 				lineFollowerIsRunning = false;
 			}
 
@@ -350,6 +393,66 @@ public class SAuto7641 extends OpMode {
 
 		return lineFollowerIsRunning;
 
+	}
+
+	public void pushTheButton() {
+		// Determines if the robot should push the left button or the right one
+		// and extends the corresponding finger
+		if (ifPushLeftButton() && pushButton) {
+			if (fingerLeft.getPosition() > 0.55) {
+				fingerLeft.setPosition(BUTTON_PRESSED);
+			}
+			if (fingerRight.getPosition() < 0.05) {
+				fingerRight.setPosition(BUTTON_NOTPRESSED);
+			}
+		} else if (!ifPushLeftButton() && pushButton){
+			if (fingerLeft.getPosition() < 0.05) {
+				fingerLeft.setPosition(BUTTON_NOTPRESSED);
+			}
+			if (fingerRight.getPosition() > 0.55) {
+				fingerRight.setPosition(BUTTON_PRESSED);
+			}
+		} else {
+			fingerLeft.setPosition(BUTTON_NOTPRESSED);
+			fingerRight.setPosition(BUTTON_NOTPRESSED);
+		}
+	}
+
+	public boolean ifPushLeftButton() {
+		if (colorSensorB.blue() > 1) { // if a blue is detected
+			// resets the red streak when a blue is initially detected
+			if (detectBlueStreak == 0) detectRedStreak = 0;
+			// u should know this...
+			detectBlueStreak++;
+			// if there is less than 10 red detections within the 25 blue detection streak
+			// the code is sure the detection is really blue.
+			if (detectBlueStreak > 50) {
+				if (detectRedStreak < 20) {
+					// determines that the beaconLeft is really blue, and resets the red streak
+					detectRedStreak = 0;
+					beaconLeftIsBlue = true;
+				}
+				if (detectRedStreak >= 20) {
+					// resets both streaks and start over when there is too much red in the blue streak
+					detectBlueStreak = 0;
+					detectRedStreak = 0;
+				}
+			}
+		} else {
+			if (detectRedStreak == 0) detectBlueStreak = 0;
+			detectRedStreak++;
+			if (detectRedStreak > 50){
+				if (detectBlueStreak < 20) {
+					detectBlueStreak = 0;
+					beaconLeftIsBlue = false;
+				}
+				if (detectBlueStreak >= 20) {
+					detectBlueStreak = 0;
+					detectRedStreak = 0;
+				}
+			}
+		}
+		return !(beaconLeftIsBlue ^ !isRed); // check if the left beacon matches the team color (NOT(XOR))
 	}
 
 
@@ -391,17 +494,23 @@ public class SAuto7641 extends OpMode {
 			}
 
 			if (Math.abs(degreesToTurn) <= 1) {
-				motorLeft.setPower(0);
-				motorRight.setPower(0);
+				motorLeftPrimary.setPower(0);
+				motorRightPrimary.setPower(0);
+				motorLeftSecondary.setPower(0);
+				motorRightSecondary.setPower(0);
 				gyroTurnIsRunning = false;
 
 			} else if (shouldTurnLeft) {
-				motorLeft.setPower(-turnSpeed);
-				motorRight.setPower(turnSpeed);
+				motorLeftPrimary.setPower(-turnSpeed);
+				motorRightPrimary.setPower(turnSpeed);
+				motorLeftSecondary.setPower(-turnSpeed);
+				motorRightSecondary.setPower(turnSpeed);
 
 			} else {
-				motorLeft.setPower(turnSpeed);
-				motorRight.setPower(-turnSpeed);
+				motorLeftPrimary.setPower(turnSpeed);
+				motorRightPrimary.setPower(-turnSpeed);
+				motorLeftSecondary.setPower(turnSpeed);
+				motorRightSecondary.setPower(-turnSpeed);
 
 			}
 		} else {
@@ -425,13 +534,14 @@ public class SAuto7641 extends OpMode {
 		// If the "move distance" routine is not yet running, set it to run.
 
 		// The return value of this routine is 'true' if we are still busy.
-
 		if (moveDistanceIsRunning) {
-			if (!motorLeft.isBusy() && motorRight.isBusy()) {
-				motorLeft.setPower(0);
-				motorRight.setPower(0);
-				motorLeft.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
-				motorRight.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
+			if (!motorLeftPrimary.isBusy() && motorRightPrimary.isBusy()) {
+				motorLeftPrimary.setPower(0);
+				motorLeftSecondary.setPower(0);
+				motorRightPrimary.setPower(0);
+				motorRightSecondary.setPower(0);
+				motorLeftPrimary.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
+				motorRightPrimary.setChannelMode(RunMode.RUN_WITHOUT_ENCODERS);
 
 				DbgLog.msg("MOVE_DISTANCE: finished");
 
@@ -443,14 +553,16 @@ public class SAuto7641 extends OpMode {
 			DbgLog.msg("MOVE_DISTANCE: distance " + distanceInInches + " power " + motorPower);
 
 
-			motorLeft.setChannelMode(RunMode.RUN_TO_POSITION);
-			motorRight.setChannelMode(RunMode.RUN_TO_POSITION);
+			motorLeftPrimary.setChannelMode(RunMode.RUN_TO_POSITION);
+			motorRightPrimary.setChannelMode(RunMode.RUN_TO_POSITION);;
 
-			motorLeft.setTargetPosition(motorLeft.getCurrentPosition() + distanceInEncoderCounts);
-			motorRight.setTargetPosition(motorRight.getCurrentPosition() + distanceInEncoderCounts);
+			motorLeftPrimary.setTargetPosition(motorLeftPrimary.getCurrentPosition() + distanceInEncoderCounts);
+			motorRightPrimary.setTargetPosition(motorRightPrimary.getCurrentPosition() + distanceInEncoderCounts);
 
-			motorLeft.setPower(motorPower);
-			motorRight.setPower(motorPower);
+			motorLeftPrimary.setPower(motorPower);
+			motorRightPrimary.setPower(motorPower);
+			motorLeftSecondary.setPower(motorPower);
+			motorRightSecondary.setPower(motorPower);
 
 			moveDistanceIsRunning = true;
 		}
@@ -534,7 +646,7 @@ public class SAuto7641 extends OpMode {
 		telemetry.addData("OptDist", distanceSensor.getLightDetectedRaw());
 		telemetry.addData("baseline", blackBaseLine + (lineDetected ? " line" : " no line"));
 		telemetry.addData("heading", gyroReader.getHeading());
-		telemetry.addData("encoders","Left:"+motorLeft.getCurrentPosition() + " right:"+motorRight.getCurrentPosition());
+		telemetry.addData("encoders","Left front:"+motorLeftPrimary.getCurrentPosition() + " right front:"+motorRightPrimary.getCurrentPosition());
 		telemetry.addData("step#",currentStep);
 
 		telemetry.addData("ColorIsRed", Boolean.toString(ftcConfig.param.colorIsRed));
