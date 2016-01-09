@@ -628,7 +628,7 @@ public class BetaAuto extends OpMode {
             test();
         }
         */
-        test();
+        testColorSensor();
         fingerRight.setDirection(Servo.Direction.FORWARD);
         fingerLeft.setDirection(Servo.Direction.REVERSE);
 
@@ -645,7 +645,10 @@ public class BetaAuto extends OpMode {
 
     // TODO the values in the parentheses still have to be changed as the robot is tested
     // put everything that should have been in the loop method (the switch statement)
-
+    public void testColorSensor() {
+        telemetry.addData("color: ", (ifPushLeftButton() ? "left" : "right")
+                + ";" + (isRed ? "red" : "blue"));
+    }
     public void test() {
         switch (currentStep) {
             case DELAY:
