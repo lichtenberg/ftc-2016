@@ -18,7 +18,6 @@ import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.ftcrobotcontroller.opmodes.ModernGyroReader;
 
 
-
 public class MitchLineFollow extends OpMode {
 
 	//

@@ -66,6 +66,7 @@ public class FtcOpModeRegister implements OpModeRegister {
     //manager.register("MitchAuto",MitchAuto.class);
     manager.register("SAuto7641",SAuto7641.class);
     manager.register("BogieTankDrive", BogieTankDrive.class);
+    manager.register("Auto7641N", Auto7641N.class);
 
     manager.register("7641 Main TeleOp",TeleOp7641.class);
     manager.register("7641 Main Auto", BetaAuto.class);
