@@ -281,7 +281,7 @@ public class BetaAuto extends OpMode {
                 motorFrontRight.setPower(0.10);
                 motorBackRight.setPower(0.10);
                 motorBackLeft.setPower(0.10);
-            } else if (motorFrontRight.getCurrentPosition() >= motorFrontRight.getTargetPosition()) {
+            } else if (false && motorFrontRight.getCurrentPosition() >= motorFrontRight.getTargetPosition()) { // false added for debugging
                 motorFrontLeft.setPower(0);
                 motorFrontRight.setPower(0);
                 motorBackLeft.setPower(0);
@@ -653,7 +653,7 @@ public class BetaAuto extends OpMode {
                 currentStep = autoStep.FORWARD_1;
                 break;
             case FORWARD_1:
-                if (!moveDistance(12, 0.3)) currentStep = autoStep.STOP;
+                if (!moveDistance(12, 0.3)) currentStep = autoStep.FOLLOW_LINE;
                 break;
             case FOLLOW_LINE:
                 if (!lineFollower()) currentStep = autoStep.STOP;
