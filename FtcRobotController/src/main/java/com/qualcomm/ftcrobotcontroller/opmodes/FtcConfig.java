@@ -46,9 +46,9 @@ public class FtcConfig {
 
     public enum AutonType {
         GO_FOR_BEACON,
-        GO_FOR_MOUNTAIN,
-        GO_FOR_BOTH,
         TEST;
+        //GO_FOR_MOUNTAIN,
+        //GO_FOR_BOTH;
         private static AutonType[] vals = values();
         public AutonType next() { return vals[(this.ordinal()+1) % vals.length];}
         public AutonType prev() { return vals[(this.ordinal()-1+vals.length) % vals.length];}
@@ -75,17 +75,20 @@ public class FtcConfig {
         gamepad2IsOK=true;
         //context=hardwareMap.appContext;
 
-        // instead declare defaults here
-        param.colorIsRed=true;
-        param.delayInSec=0;
-        param.autonType=AutonType.TEST;
-        param.pushButton=true;
-
-        param.startNearMountain = false;
+        setDefaults();
 
         // setup initial toggle memory states for buttons used
         lastBack1=false; lastA1=false; lastB2=false; lastY1=false; lastStart1=false;
         configStepState = ConfigStep.TEST_GAMEPAD1;
+    }
+
+    public void setDefaults() {
+        // declare defaults here
+        param.colorIsRed=true;
+        param.delayInSec=0;
+        param.autonType=AutonType.GO_FOR_BEACON;
+        param.pushButton=true;
+        param.startNearMountain = false;
     }
 
     public void init_loop(Context context, OpMode opMode) {
@@ -204,7 +207,7 @@ public class FtcConfig {
 
         currConfigStepCheck = ConfigStep.PUSH_BUTTON;
         if (configStepState.ordinal() >= currConfigStepCheck.ordinal()) {
-            opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "Push the button: " + param.startNearMountain);
+            opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "Push the button: " + param.pushButton);
         }
         // configure this parameter
         if (configStepState == currConfigStepCheck) {
@@ -223,7 +226,7 @@ public class FtcConfig {
             opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "READY TO GO!");
         }
 
-        if (/*configStepState != ConfigStep.READY*/true) {
+        if (configStepState != ConfigStep.READY) {
             opMode.telemetry.addData("D" + configStepState.ordinal(), "Push Start or Right Bumper for next option");
         }
         opMode.telemetry.addData("E" + configStepState.ordinal(), "Push Back or Left Bumper to go back");
@@ -243,5 +246,4 @@ public class FtcConfig {
         lastY1=y1;
         lastStart1=start1;
     }
-
 }
