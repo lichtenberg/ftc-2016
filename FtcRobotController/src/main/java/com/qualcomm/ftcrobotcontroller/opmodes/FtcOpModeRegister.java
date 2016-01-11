@@ -56,6 +56,11 @@ public class FtcOpModeRegister implements OpModeRegister {
      */
 
     manager.register("NullOp", NullOp.class);
+    manager.register("7641 Main TeleOp",TeleOp7641.class);
+    manager.register("7641 Main Auto", BetaAuto.class);
+    manager.register("SAuto7641",SAuto7641.class);
+    manager.register("Auto7641N", Auto7641N.class);
+    manager.register("All dem testin' stuff", BetaTest.class);
 
     //manager.register("MatrixK9TeleOp", MatrixK9TeleOp.class);
     manager.register("SRBTeleop",SRBTeleop.class);
@@ -64,14 +69,13 @@ public class FtcOpModeRegister implements OpModeRegister {
     manager.register("MitchLineFollow",MitchLineFollow.class);
     manager.register("MitchLinearOp",MitchLinearOp.class);
     //manager.register("MitchAuto",MitchAuto.class);
-    manager.register("SAuto7641",SAuto7641.class);
+
     manager.register("BogieTankDrive", BogieTankDrive.class);
-    manager.register("Auto7641N", Auto7641N.class);
 
-    manager.register("7641 Main TeleOp",TeleOp7641.class);
-    manager.register("7641 Main Auto", BetaAuto.class);
 
-    manager.register("All dem testin' stuff", BetaTest.class);
+
+
+
 
     //manager.register("BogieTankdrive",K9TankDrive.class);
     //manager.register ("PushBotAuto", PushBotAuto.class);

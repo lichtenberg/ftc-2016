@@ -20,16 +20,15 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 
 public class FtcConfig {
-//
 
     private enum ConfigStep {
         TEST_GAMEPAD1,
         TEST_GAMEPAD2,
         COLOR,
-        DELAY,
-        AUTON_TYPE,
         START_NEAR_MTN,
+        DELAY,
         PUSH_BUTTON,
+        AUTON_TYPE,
         READY;
         private static ConfigStep[] vals = values();
         public ConfigStep next() { return vals[(this.ordinal()+1) % vals.length];}
@@ -139,9 +138,9 @@ public class FtcConfig {
         // message to driver about state of this config parameter
         if (configStepState.ordinal() >= currConfigStepCheck.ordinal()) {
             if (param.colorIsRed) {
-                opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "Color: Red");
+                opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "Team: Red");
             } else {
-                opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "Color: Blue");
+                opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "Team: Blue");
             }
         }
         // configure this parameter
@@ -152,6 +151,21 @@ public class FtcConfig {
             }
             if (opMode.gamepad1.b) {
                 param.colorIsRed = true;
+            }
+        }
+
+        currConfigStepCheck = ConfigStep.START_NEAR_MTN;
+        if (configStepState.ordinal() >= currConfigStepCheck.ordinal()) {
+            opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "Starting near mountain: " + param.startNearMountain);
+        }
+        // configure this parameter
+        if (configStepState == currConfigStepCheck) {
+            opMode.telemetry.addData("C" + configStepState.ordinal() + "A", "Push Y for TRUE, A for FALSE");
+            if (y1 && !lastY1) {
+                param.startNearMountain = true;
+            }
+            if (a1 && !lastA1) {
+                param.startNearMountain = false;
             }
         }
 
@@ -174,6 +188,21 @@ public class FtcConfig {
             }
         }
 
+        currConfigStepCheck = ConfigStep.PUSH_BUTTON;
+        if (configStepState.ordinal() >= currConfigStepCheck.ordinal()) {
+            opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "Push the button: " + param.pushButton);
+        }
+        // configure this parameter
+        if (configStepState == currConfigStepCheck) {
+            opMode.telemetry.addData("C" + configStepState.ordinal() + "A", "Push Y for TRUE, A for FALSE");
+            if (y1 && !lastY1) {
+                param.pushButton = true;
+            }
+            if (a1 && !lastA1) {
+                param.pushButton = false;
+            }
+        }
+
         currConfigStepCheck = ConfigStep.AUTON_TYPE;
         // message to driver about state of this config parameter
         if (configStepState.ordinal() >= currConfigStepCheck.ordinal()) {
@@ -187,36 +216,6 @@ public class FtcConfig {
             }
             if (a1 && !lastA1) {
                 param.autonType = param.autonType.prev();
-            }
-        }
-
-        currConfigStepCheck = ConfigStep.START_NEAR_MTN;
-        if (configStepState.ordinal() >= currConfigStepCheck.ordinal()) {
-            opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "Starting near mountain: " + param.startNearMountain);
-        }
-        // configure this parameter
-        if (configStepState == currConfigStepCheck) {
-            opMode.telemetry.addData("C" + configStepState.ordinal() + "A", "Push Y for TRUE, A for FALSE");
-            if (y1 && !lastY1) {
-                param.startNearMountain = true;
-            }
-            if (a1 && !lastA1) {
-                param.startNearMountain = false;
-            }
-        }
-
-        currConfigStepCheck = ConfigStep.PUSH_BUTTON;
-        if (configStepState.ordinal() >= currConfigStepCheck.ordinal()) {
-            opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "Push the button: " + param.pushButton);
-        }
-        // configure this parameter
-        if (configStepState == currConfigStepCheck) {
-            opMode.telemetry.addData("C" + configStepState.ordinal() + "A", "Push Y for TRUE, A for FALSE");
-            if (y1 && !lastY1) {
-                param.pushButton = true;
-            }
-            if (a1 && !lastA1) {
-                param.pushButton = false;
             }
         }
 

@@ -29,7 +29,7 @@ public class BetaAuto extends OpMode {
     Servo fingerLeft;
     Servo fingerRight;
     Servo personDropper;
-    Servo zipServo;
+    //Servo zipServo;
 
     //
     // The member variables used in servos
@@ -52,7 +52,7 @@ public class BetaAuto extends OpMode {
     //
     // The member variables below are used when we are following a line.
     //
-    final static double POWER_WHEN_FOLLOWING_LINE = 0.08;
+    final static double LINE_FOLLOW_SPEED = 0.08;
     int blackBaseLine = 0;
     boolean lineDetected = false;
     boolean lineFollowerIsRunning = false;
@@ -125,38 +125,36 @@ public class BetaAuto extends OpMode {
         motorFrontLeft.setDirection(DcMotor.Direction.REVERSE);
         motorBackRight.setDirection(DcMotor.Direction.REVERSE);
 
+
         /*
          * Servos
          */
         fingerRight = hardwareMap.servo.get("servo-right");
         fingerLeft = hardwareMap.servo.get("servo-left");
         personDropper = hardwareMap.servo.get("servo-person");
-        zipServo = hardwareMap.servo.get("servo-zip");
+        //zipServo = hardwareMap.servo.get("servo-zip");
         fingerRight.setDirection(Servo.Direction.FORWARD);
         fingerLeft.setDirection(Servo.Direction.REVERSE);
+
 
         /*
          * Gather the sensors out of the hardware map.
          */
+
         colorSensorB = hardwareMap.colorSensor.get("color-front");
         colorSensorL = hardwareMap.colorSensor.get("color-bottom");
         colorSensorL.setI2cAddress(0x3E);
+        colorSensorB.enableLed(false); // nope. don't enable the LED
+        colorSensorL.enableLed(true);
+
 
         /*
          * Set up our gyro.   To help with the gyro we take the I2C device
          * and give it to our special ModernGyroReader class, which takes care
          * of the dirty work of reading the heading out of the gyro.
          */
-
         gyro = hardwareMap.i2cDevice.get("gyro-1");
         gyroReader = new ModernGyroReader(gyro);
-
-        /*
-         * Set up the color sensor.
-         */
-
-        colorSensorB.enableLed(false); // nope. don't enable the LED
-        colorSensorL.enableLed(true);
     }
 
     //
@@ -273,9 +271,12 @@ public class BetaAuto extends OpMode {
             int lineSensor = colorSensorL.alpha(); // Get the amount of light detected by the sensor as an int
             //int lineSensor = distanceSensor.getLightDetectedRaw(); // Get the amount of light detected by the sensor as an int
 
-            if (lineSensor > (blackBaseLine + 2)) { // TODO change this value
+            if (lineSensor > (blackBaseLine + 2)) { // TODO add noise ignoring code
                 if (!lineDetected) {
                     DbgLog.msg("LINE_FOLLOW:  Detected the line");
+                    int distanceInEncoderCounts = inchesToEncoder(24);
+                    motorFrontLeft.setTargetPosition(motorFrontLeft.getCurrentPosition() + distanceInEncoderCounts);
+                    motorFrontRight.setTargetPosition(motorFrontRight.getCurrentPosition() + distanceInEncoderCounts);
                     lineDetected = true;
                 }
             }
@@ -295,22 +296,21 @@ public class BetaAuto extends OpMode {
                 // Line has been detected.   If we see the line, turn one way.
                 // If we do not see the line, turn the other way.
                 // The robot will oscillate as it follows the line.
-                if (pushButton) pushTheButton(); // pushButton is from ftcConfig settings
+                //if (pushButton) pushTheButton(); // pushButton is from ftcConfig settings
+                if (pushButton) setPushButtonPosition();
+                else {
+                    fingerLeft.setPosition(BUTTON_NOTPRESSED);
+                    fingerRight.setPosition(BUTTON_NOTPRESSED);
+                }
                 if (lineSensor > (blackBaseLine + 2)) { // light detected
-                    if (!lineDetected) {
-                        int distanceInEncoderCounts = inchesToEncoder(24);
-                        motorFrontLeft.setTargetPosition(motorFrontLeft.getCurrentPosition() + distanceInEncoderCounts);
-                        motorFrontRight.setTargetPosition(motorFrontRight.getCurrentPosition() + distanceInEncoderCounts);
-                        lineDetected = true;
-                    }
                     motorFrontLeft.setPower(0);
-                    motorFrontRight.setPower(POWER_WHEN_FOLLOWING_LINE);
+                    motorFrontRight.setPower(LINE_FOLLOW_SPEED);
                     motorBackLeft.setPower(0);
-                    motorBackRight.setPower(POWER_WHEN_FOLLOWING_LINE);
+                    motorBackRight.setPower(LINE_FOLLOW_SPEED);
                 } else {
-                    motorFrontLeft.setPower(POWER_WHEN_FOLLOWING_LINE);
+                    motorFrontLeft.setPower(LINE_FOLLOW_SPEED);
                     motorFrontRight.setPower(0);
-                    motorBackLeft.setPower(POWER_WHEN_FOLLOWING_LINE);
+                    motorBackLeft.setPower(LINE_FOLLOW_SPEED);
                     motorBackRight.setPower(0);
                 }
             }
@@ -321,7 +321,7 @@ public class BetaAuto extends OpMode {
         return lineFollowerIsRunning;
     }
 
-    public void pushTheButton() {
+    public void setPushButtonPosition() {
         // Determines if the robot should push the left button or the right one
         // and extends the corresponding finger
         if (ifPushLeftButton() && pushButton) {
@@ -424,7 +424,8 @@ public class BetaAuto extends OpMode {
 
             // If we need to turn
 
-            DbgLog.msg("TURN: myHeading:" + curHeading + " dest " + (destHeading) + " left:" + degreesToTurn + (shouldTurnLeft ? " LEFT" : " RIGHT"));
+            DbgLog.msg("TURN: myHeading:" + curHeading + " dest: " + (destHeading) +
+                    degreesToTurn + (shouldTurnLeft ? " LEFT" : " RIGHT"));
 
             if (Math.abs(degreesToTurn) <= 20) {
                 turnSpeed = slowTurnSpeed;
@@ -460,25 +461,6 @@ public class BetaAuto extends OpMode {
     }
 
     // ===== moveDistance =====
-    // WARNING: HAPHAZARDLY SLAPPED-TOGETHER TEMPORARILY SKETCHY FIX
-    // FOR RAGE QUIT-INDUCING BUGS AHEAD!!! PROCEED AT YOUR OWN RISK.
-    // ( ^^ actually nope lol its fixed ^^)
-
-    // ***RESOLVED***
-    // Seems like the motorFrontXxx.getCurrentPosition() values are +- inverted, so add a negative to getCurrentPosition()
-    // Update: the RIGHT motors were reversed instead of the left ones, so that has been corrected
-    // The reasoning: both left and right motors are displaying that they are moving backwards
-    // so this is why they have been displaying negative values for currentPosition
-
-    // ***RESOLVED***
-    // Another bug: the motors still twitch and move a bit even after the motors have done their job
-    // This has been observed in the motorFrontRight on the MentorBot, not the FrontLeft
-    // Reading the telemetry data, the cause for this is the setChannelMode(RunMode.*) is not changing
-    // Seems like we never needed the RunMode.RUN_TO_POSITION after all
-    // Since there is already code that stops the robot, we don't need to mess with RunMode or isBusy()
-
-    // ^^^ DUDE U WOT M8 ??!! ^^^
-    // Turns out part of the problem is ***NOT ADDING "break;"*** to the end of each step in the switch statement of the loop code
 
     public boolean moveDistance(double distanceInInches) {
         return moveDistance(distanceInInches, 0.3);
@@ -604,7 +586,7 @@ public class BetaAuto extends OpMode {
 
         fingerLeft.setPosition(BUTTON_NOTPRESSED);
         fingerRight.setPosition(BUTTON_NOTPRESSED);
-        zipServo.setPosition(ZIP_CLOSED);
+        //1zipServo.setPosition(ZIP_CLOSED);
         personDropper.setPosition(PERSON_NOT_DROPPED);
         startOpModeTime = System.currentTimeMillis();
     }
@@ -640,15 +622,16 @@ public class BetaAuto extends OpMode {
         fingerRight.setDirection(Servo.Direction.FORWARD);
         fingerLeft.setDirection(Servo.Direction.REVERSE);
 
-        telemetry.addData("TIME ELAPSED: ", time);
-        telemetry.addData("TIME LEFT", 30 - time);
-        telemetry.addData("enc: ", motorFrontLeft.getCurrentPosition() + " " + motorFrontRight.getCurrentPosition());
-        telemetry.addData("mode", motorFrontLeft.getMode() + " " + motorFrontRight.getMode());
-        telemetry.addData("gyro: ", " cur " + gyroReader.curHeading + " dest " + destHeading + " degsToTurn " + degreesToTurn);
-        telemetry.addData("currentStep: ", currentStep);
-        telemetry.addData("autonType: ", autonType);
-        telemetry.addData("finger pos: ", fingerLeft.getPosition() + " " + fingerRight.getPosition());
-        telemetry.addData("personDropper pos: ", personDropper.getPosition());
+        telemetry.addData("TIME ELAPSED: ", (System.currentTimeMillis() - startOpModeTime) / 1000 + "\n");
+        telemetry.addData("TIME LEFT", 30 - ((System.currentTimeMillis() - startOpModeTime) / 1000) + "\n");
+        telemetry.addData("currentStep: ", currentStep + "\n");
+        telemetry.addData("autonType: ", autonType + "\n");
+        telemetry.addData("finger pos: ", fingerLeft.getPosition() + " " + fingerRight.getPosition() + "\n");
+        telemetry.addData("personDropper pos: ", personDropper.getPosition() + "\n");
+        telemetry.addData("enc: ", motorFrontLeft.getCurrentPosition() + " " + motorFrontRight.getCurrentPosition() + "\n");
+        //telemetry.addData("mode", motorFrontLeft.getMode() + " " + motorFrontRight.getMode());
+        telemetry.addData("gyro: ", " cur " + gyroReader.curHeading + " dest " + destHeading + " degsToTurn " + degreesToTurn + "\n");
+
     }
 
     // TODO the values in the parentheses still have to be changed as the robot is tested
@@ -685,7 +668,7 @@ public class BetaAuto extends OpMode {
             case GET_TIME:
                 finishedTime = System.currentTimeMillis();
             case STOP:
-                telemetry.addData("",finishedTime - startOpModeTime);
+                telemetry.addData("", (finishedTime - startOpModeTime)/1000);
                 break;
         }
     }
@@ -703,16 +686,8 @@ public class BetaAuto extends OpMode {
             case GET_TIME:
                 finishedTime = System.currentTimeMillis();
             case STOP:
-                telemetry.addData("",finishedTime - startOpModeTime);
+                telemetry.addData("", (finishedTime - startOpModeTime) / 1000);
                 break;
         }
-    }
-
-    //
-    // This method is called when the OpMode is stopped.
-    //
-
-    public void stop() {
-        //well it means stop.
     }
 }
