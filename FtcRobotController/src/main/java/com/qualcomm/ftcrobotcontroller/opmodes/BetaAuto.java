@@ -286,11 +286,7 @@ public class BetaAuto extends OpMode {
                 motorFrontRight.setPower(0.10);
                 motorBackRight.setPower(0.10);
                 motorBackLeft.setPower(0.10);
-<<<<<<< HEAD
             } else if (false && motorFrontRight.getCurrentPosition() >= motorFrontRight.getTargetPosition()) { // false added for debugging
-=======
-            } else if (false && motorFrontRight.getCurrentPosition() >= motorFrontRight.getTargetPosition()) {
->>>>>>> f0b69a1a04f50d4a8e1966d28dc39be4cc38eba4
                 motorFrontLeft.setPower(0);
                 motorFrontRight.setPower(0);
                 motorBackLeft.setPower(0);
@@ -640,41 +636,6 @@ public class BetaAuto extends OpMode {
 
     // TODO the values in the parentheses still have to be changed as the robot is tested
     // put everything that should have been in the loop method (the switch statement)
-
-<<<<<<< HEAD
-    public void test() {
-        switch (currentStep) {
-            case DELAY:
-                currentStep = autoStep.FORWARD_1;
-                break;
-            case FORWARD_1:
-                if (!moveDistance(12, 0.3)) currentStep = autoStep.FOLLOW_LINE;
-                break;
-            case FOLLOW_LINE:
-                if (!lineFollower()) currentStep = autoStep.STOP;
-                break;
-            case STOP:
-                break;
-        }
-    }
-    public void testFoo() {
-        switch (currentStep) {
-            case DELAY:
-                currentStep = autoStep.FORWARD_1;
-                break;
-            case FORWARD_1:
-                /*if (!moveDistance(18, 0.3))*/ currentStep = autoStep.FOLLOW_LINE;
-                break;
-            case FOLLOW_LINE:
-                if (!lineFollower()) currentStep = autoStep.STOP;
-                break;
-            case STOP:
-                break;
-        }
-    }
-
-=======
->>>>>>> f0b69a1a04f50d4a8e1966d28dc39be4cc38eba4
     void beacon() {
         switch (currentStep) {
             case IDLE:
