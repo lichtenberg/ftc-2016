@@ -22,15 +22,18 @@ public class TeleOp7641 extends OpMode{
     final static double ZIP_OPEN = 0.5;
     final static double ZIP_CLOSED = 1.0;
 
-    Boolean oldX;
+    Boolean oldB;
+	Boolean oldX;
 	DcMotor motorRightPrimary;
 	DcMotor motorRightSecondary;
 	DcMotor motorLeftPrimary;
 	DcMotor motorLeftSecondary;
-    Servo zipServo;
+    Servo zipServoRight;
+	Servo zipServoLeft;
 	Servo personDropperServo;
 
-    double zipPosition;
+    double zipPositionRight;
+	double zipPositionLeft;
     double personPosition;
 	/**
 	 * Constructor
@@ -55,9 +58,11 @@ public class TeleOp7641 extends OpMode{
 		motorLeftPrimary = hardwareMap.dcMotor.get("motor-br");
 		motorRightSecondary = hardwareMap.dcMotor.get("motor-fl");
 		motorLeftSecondary = hardwareMap.dcMotor.get("motor-bl");
-        zipServo = hardwareMap.servo.get("servo-zip");
+        zipServoRight = hardwareMap.servo.get("servo-rzip");
+		zipServoLeft = hardwareMap.servo.get("servo-lzip");
         personDropperServo = hardwareMap.servo.get("servo-person");
-        oldX = false;
+        oldB = false;
+		oldX = false;
         motorRightPrimary.setDirection(DcMotor.Direction.REVERSE);
         motorLeftSecondary.setDirection(DcMotor.Direction.REVERSE);
 
@@ -65,8 +70,10 @@ public class TeleOp7641 extends OpMode{
 
     public void init_loop() {
 
-        zipServo.setPosition(ZIP_CLOSED);
-        zipPosition = ZIP_CLOSED;
+        zipServoRight.setPosition(ZIP_CLOSED);
+        zipPositionRight = ZIP_CLOSED;
+		zipServoLeft.setPosition(ZIP_CLOSED);
+		zipPositionLeft = ZIP_CLOSED;
         personDropperServo.setPosition(0.8);
         personPosition =  0.8;
 
@@ -74,14 +81,20 @@ public class TeleOp7641 extends OpMode{
 	@Override
 	public void loop() {
 
-        // Zipline Trigger
-        zipServo.setPosition(zipPosition);
-        if (gamepad2.x && !oldX) {
-            zipPosition = (zipPosition != ZIP_CLOSED) ? ZIP_CLOSED : ZIP_OPEN;
+        // Zipline Trigger Right
+        zipServoRight.setPosition(zipPositionRight);
+        if (gamepad2.b && !oldB) {
+            zipPositionRight = (zipPositionRight != ZIP_CLOSED) ? ZIP_CLOSED : ZIP_OPEN;
         }
-        oldX = gamepad2.x;
+        oldB = gamepad2.b;
 
 
+		// Zipline Trigger Left
+		zipServoLeft.setPosition(zipPositionLeft);
+		if (gamepad2.x && !oldX) {
+			zipPositionLeft = (zipPositionLeft != ZIP_CLOSED) ? ZIP_CLOSED : ZIP_OPEN;
+		}
+		oldX = gamepad2.x;
         // Person Dropper
 
         if (gamepad2.y == true) {
@@ -132,8 +145,9 @@ public class TeleOp7641 extends OpMode{
 		}
 
         // telemetry.addData("distance", "Distance Travelled : " + String.format("%.2f", encoder*2240*6*3.14) + "inches");
-        telemetry.addData("zip","Zip position " + zipServo.getPosition());
-        telemetry.addData("person","dropper position " + personDropperServo.getPosition());
+        telemetry.addData("rzip","Right Zip Position " + zipServoRight.getPosition());
+		telemetry.addData("lzip","Left Zip Position " + zipServoLeft.getPosition());
+        telemetry.addData("person","Dropper Position " + personDropperServo.getPosition());
 
     }
 
@@ -145,7 +159,8 @@ public class TeleOp7641 extends OpMode{
 	@Override
 	public void stop() {
         personDropperServo.setPosition(0.8);
-        zipServo.setPosition(ZIP_CLOSED);
+        zipServoRight.setPosition(ZIP_CLOSED);
+		zipServoLeft.setPosition(ZIP_CLOSED);
 	}
 	
 	/*
