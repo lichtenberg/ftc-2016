@@ -83,7 +83,7 @@ public class FtcConfig {
 
     public void setDefaults() {
         // declare defaults here
-        param.colorIsRed=true;
+        param.colorIsRed=false;
         param.delayInSec=0;
         param.autonType=AutonType.GO_FOR_BEACON;
         param.pushButton=true;

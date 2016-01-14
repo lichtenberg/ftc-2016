@@ -345,6 +345,11 @@ public class BetaAuto extends OpMode {
     }
 
     public boolean ifPushLeftButton() {
+        // this method has two sections
+        // how it works is, if it detects a blue it will check blue for 50 times
+        // and measure how many times it detected red. Kind of the "purity" of the signal
+        // the two sections are for detecting blue and red respectively
+
         if (colorSensorB.blue() > 1) { // if a blue is detected
             // resets the red streak when a blue is initially detected
             if (detectBlueStreak == 0) detectRedStreak = 0;
@@ -378,7 +383,7 @@ public class BetaAuto extends OpMode {
                 }
             }
         }
-        return !(beaconLeftIsBlue ^ !isRed); // check if the left beacon matches the team color (NOT(XOR))
+        return !(beaconLeftIsBlue ^ !isRed); // check if the left beacon matches the team color XNOR (NOT(XOR))
     }
 
     public boolean dropPerson() {
@@ -654,6 +659,7 @@ public class BetaAuto extends OpMode {
                 if (gyroTurn(isRed ? -15 : 15)) {
                     currentStep = autoStep.FOLLOW_LINE;
                 }
+                break;
             case FOLLOW_LINE: //follows line to the beacon
                 if (!lineFollower()) {
                     currentStep = autoStep.DROP_PERSON;
@@ -666,6 +672,8 @@ public class BetaAuto extends OpMode {
                 break;
             case GET_TIME:
                 finishedTime = System.currentTimeMillis();
+                currentStep = autoStep.STOP;
+                break;
             case STOP:
                 telemetry.addData("", (finishedTime - startOpModeTime)/1000);
                 break;
@@ -684,6 +692,8 @@ public class BetaAuto extends OpMode {
                 break;
             case GET_TIME:
                 finishedTime = System.currentTimeMillis();
+                currentStep = autoStep.STOP;
+                break;
             case STOP:
                 telemetry.addData("", (finishedTime - startOpModeTime) / 1000);
                 break;
