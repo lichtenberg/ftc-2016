@@ -39,8 +39,8 @@ public class BetaTest extends OpMode {
 
 public class BetaTest extends BetaAuto {
 
-    @Override
-    public boolean ifPushLeftButton() {
+    //@Override
+    public boolean ifPushLeftButtonZZZ() {
         beaconLeftIsBlue = (colorSensorB.blue() > 1);
         return !(beaconLeftIsBlue ^ !isRed); // check if the left beacon matches the team color XNOR (NOT(XOR))
     }
@@ -48,7 +48,21 @@ public class BetaTest extends BetaAuto {
     @Override
     public void loop() {
         telemetry.addData("push the left button? ", ifPushLeftButton());
-        setPushButtonPosition();
+        //setPushButtonPosition();
+        switch (currentStep) {
+            case DELAY:
+                currentStep = autoStep.FOLLOW_LINE;
+                break;
+            case FOLLOW_LINE:
+                if (!lineFollower()) currentStep = autoStep.DROP_PERSON;
+                break;
+            case DROP_PERSON:
+                if (!dropPerson()) currentStep = autoStep.STOP;
+                break;
+            case STOP:
+                break;
+        }
+        lineFollower();
     }
 
 }

@@ -286,7 +286,7 @@ public class BetaAuto extends OpMode {
                 motorFrontRight.setPower(0.10);
                 motorBackRight.setPower(0.10);
                 motorBackLeft.setPower(0.10);
-            } else if (false && motorFrontRight.getCurrentPosition() >= motorFrontRight.getTargetPosition()) { // false added for debugging
+            } else if (lineDetected && motorFrontRight.getCurrentPosition() >= motorFrontRight.getTargetPosition()) {
                 motorFrontLeft.setPower(0);
                 motorFrontRight.setPower(0);
                 motorBackLeft.setPower(0);
@@ -409,7 +409,6 @@ public class BetaAuto extends OpMode {
     //
 
     public boolean gyroTurn(int howMuch) {
-        // if turning right then send a positive value into howMuch
 
         // We update the gyro's currentHeading each time the loop is called.
         // It runs on its own, we query the current compass position by reading the
@@ -459,7 +458,7 @@ public class BetaAuto extends OpMode {
 
             DbgLog.msg("STARTING TURN: amount " + howMuch + " destHeading " + destHeading);
 
-            shouldTurnLeft = !(degreesToTurn > 0); // if-then-else on one line
+            shouldTurnLeft = (degreesToTurn > 0);
             gyroTurnIsRunning = true;
         }
         return gyroTurnIsRunning;
@@ -656,7 +655,7 @@ public class BetaAuto extends OpMode {
                 }
                 break;
             case TURN_1:
-                if (gyroTurn(isRed ? -15 : 15)) {
+                if (!gyroTurn(isRed ? 15 : -15)) {
                     currentStep = autoStep.FOLLOW_LINE;
                 }
                 break;
