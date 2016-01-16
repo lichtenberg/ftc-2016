@@ -125,6 +125,7 @@ public class Auto7641N extends OpMode{
         fingerRight.setDirection(Servo.Direction.FORWARD);
         fingerLeft.setDirection(Servo.Direction.REVERSE);
 
+
         /*
          * Gather the sensors out of the hardware map.
          */
