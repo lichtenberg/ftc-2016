@@ -29,14 +29,16 @@ public class BetaAuto extends OpMode {
     Servo fingerLeft;
     Servo fingerRight;
     Servo personDropper;
-    //Servo zipServo;
+    Servo zipServoLeft;
+    Servo zipServoRight;
 
     //
     // The member variables used in servos
     //
     final static double BUTTON_PRESSED = 0;
     final static double BUTTON_NOTPRESSED = 0.6;
-    final static double ZIP_CLOSED = 1.0;
+    final static double ZIP_OPEN = 0.5;
+    final static double ZIP_CLOSED = 0.8;
     final static double PERSON_DROPPED = 0;
     final static double PERSON_NOT_DROPPED = 0.8;
 
@@ -52,8 +54,9 @@ public class BetaAuto extends OpMode {
     //
     // The member variables below are used when we are following a line.
     //
-    final static double LINE_FOLLOW_SPEED = 0.08;
+    final static double LINE_FOLLOW_SPEED = 0.15;
     int blackBaseLine = 0;
+    final static int LINE_ALPHA = 20;
     boolean lineDetected = false;
     boolean lineFollowerIsRunning = false;
 
@@ -87,6 +90,7 @@ public class BetaAuto extends OpMode {
     boolean pushButton;
     FtcConfig.AutonType autonType;
 
+    int targetPosition;
     long startOpModeTime;
     long finishedTime;
 
@@ -132,9 +136,10 @@ public class BetaAuto extends OpMode {
         fingerRight = hardwareMap.servo.get("servo-right");
         fingerLeft = hardwareMap.servo.get("servo-left");
         personDropper = hardwareMap.servo.get("servo-person");
-        //zipServo = hardwareMap.servo.get("servo-zip");
         fingerRight.setDirection(Servo.Direction.FORWARD);
         fingerLeft.setDirection(Servo.Direction.REVERSE);
+        zipServoRight = hardwareMap.servo.get("servo-rzip");
+        zipServoLeft = hardwareMap.servo.get("servo-lzip");
 
 
         /*
@@ -271,14 +276,12 @@ public class BetaAuto extends OpMode {
             int lineSensor = colorSensorL.alpha(); // Get the amount of light detected by the sensor as an int
             //int lineSensor = distanceSensor.getLightDetectedRaw(); // Get the amount of light detected by the sensor as an int
 
-            if (lineSensor > (blackBaseLine + 2)) { // TODO add noise ignoring code
-                if (!lineDetected) {
-                    DbgLog.msg("LINE_FOLLOW:  Detected the line");
-                    int distanceInEncoderCounts = inchesToEncoder(24);
-                    motorFrontLeft.setTargetPosition(motorFrontLeft.getCurrentPosition() + distanceInEncoderCounts);
-                    motorFrontRight.setTargetPosition(motorFrontRight.getCurrentPosition() + distanceInEncoderCounts);
-                    lineDetected = true;
-                }
+            if (lineSensor > (blackBaseLine + LINE_ALPHA) && !lineDetected) { // TODO add noise ignoring code
+                DbgLog.msg("LINE_FOLLOW:  Detected the line");
+                int distanceInEncoderCounts = inchesToEncoder(24);
+                targetPosition = (motorFrontLeft.getCurrentPosition() + distanceInEncoderCounts);
+                targetPosition = (motorFrontRight.getCurrentPosition() + distanceInEncoderCounts);
+                lineDetected = true;
             }
             if (!lineDetected) {
                 // Line not detected yet. Keep going straight.
@@ -286,15 +289,15 @@ public class BetaAuto extends OpMode {
                 motorFrontRight.setPower(0.10);
                 motorBackRight.setPower(0.10);
                 motorBackLeft.setPower(0.10);
-            } else if (lineDetected && motorFrontRight.getCurrentPosition() >= motorFrontRight.getTargetPosition()) {
+            } else if (lineDetected && (motorFrontRight.getCurrentPosition()) >= targetPosition) {
                 motorFrontLeft.setPower(0);
                 motorFrontRight.setPower(0);
                 motorBackLeft.setPower(0);
                 motorBackRight.setPower(0);
                 lineFollowerIsRunning = false;
             } else {
-                // Line has been detected.   If we see the line, turn one way.
-                // If we do not see the line, turn the other way.
+                // Line has been detected.   If we see the line, turn one way. (left, in the case of red team)
+                // If we do not see the line, turn the other way. (right)
                 // The robot will oscillate as it follows the line.
                 //if (pushButton) pushTheButton(); // pushButton is from ftcConfig settings
                 if (pushButton) setPushButtonPosition();
@@ -302,7 +305,13 @@ public class BetaAuto extends OpMode {
                     fingerLeft.setPosition(BUTTON_NOTPRESSED);
                     fingerRight.setPosition(BUTTON_NOTPRESSED);
                 }
-                if (lineSensor > (blackBaseLine + 2)) { // light detected
+                // it will turn right instead of left on detecting the line while on blue team
+                // isRed, detect line --> left (true)
+                // isRed, not detect line --> right (false)
+                // not isRed, detect line --> right (false)
+                // not isRed, not detect line --> left (true)
+                //if (!(isRed ^ lineSensor > (blackBaseLine + LINE_ALPHA))) { // light detected
+                if (lineSensor > (blackBaseLine + LINE_ALPHA)) {
                     motorFrontLeft.setPower(0);
                     motorFrontRight.setPower(LINE_FOLLOW_SPEED);
                     motorBackLeft.setPower(0);
@@ -480,8 +489,9 @@ public class BetaAuto extends OpMode {
         // The return value of this routine is 'true' if we are still busy.
 
         if (moveDistanceIsRunning) {
-            if ((motorFrontRight.getCurrentPosition() >= motorFrontRight.getTargetPosition() && distanceInInches > 0)
-                    || (motorFrontRight.getCurrentPosition() <= (motorFrontRight.getTargetPosition()) && distanceInInches < 0)){
+            if ((motorFrontRight.getCurrentPosition() >= targetPosition && distanceInInches > 0)
+                    || (motorFrontRight.getCurrentPosition() <= targetPosition && distanceInInches < 0)){
+            //if (Math.abs(motorFrontRight.getCurrentPosition()) >= Math.abs(motorFrontRight.getTargetPosition())) {
                 motorFrontLeft.setPower(0);
                 motorFrontRight.setPower(0);
                 motorBackLeft.setPower(0);
@@ -492,10 +502,10 @@ public class BetaAuto extends OpMode {
         } else {
             int distanceInEncoderCounts = inchesToEncoder(distanceInInches);
 
-            DbgLog.msg("Move:" + distanceInEncoderCounts + ';' + motorFrontLeft.getCurrentPosition() + ';' + motorFrontLeft.getTargetPosition());
+            DbgLog.msg("Move:" + distanceInEncoderCounts + ';' + motorFrontLeft.getCurrentPosition() + ';' + targetPosition);
 
-            motorFrontLeft.setTargetPosition(motorFrontLeft.getCurrentPosition() + distanceInEncoderCounts);
-            motorFrontRight.setTargetPosition(motorFrontRight.getCurrentPosition() + distanceInEncoderCounts);
+            targetPosition = (motorFrontLeft.getCurrentPosition() + distanceInEncoderCounts);
+            targetPosition = (motorFrontRight.getCurrentPosition() + distanceInEncoderCounts);
 
             // reverse motor power if moving backward
             if (distanceInInches > 0) {
@@ -559,6 +569,7 @@ public class BetaAuto extends OpMode {
         FORWARD_3,
         FOLLOW_LINE,
         DROP_PERSON,
+        CLIMB_MOUNTAIN,
         GET_TIME,
         STOP
     }
@@ -590,7 +601,8 @@ public class BetaAuto extends OpMode {
 
         fingerLeft.setPosition(BUTTON_NOTPRESSED);
         fingerRight.setPosition(BUTTON_NOTPRESSED);
-        //1zipServo.setPosition(ZIP_CLOSED);
+        zipServoLeft.setPosition(ZIP_CLOSED);
+        zipServoRight.setPosition(ZIP_CLOSED);
         personDropper.setPosition(PERSON_NOT_DROPPED);
         startOpModeTime = System.currentTimeMillis();
     }
@@ -618,9 +630,11 @@ public class BetaAuto extends OpMode {
 
         // ftcConfig.param.autonType.TEST will yield access via static message
         if (autonType == FtcConfig.AutonType.GO_FOR_BEACON) {
-            beacon();
+            beacon(false);
         } else if (autonType == FtcConfig.AutonType.TEST) {
             test();
+        } else if (autonType == FtcConfig.AutonType.GO_FOR_BOTH) {
+            beacon(true);
         }
 
         fingerRight.setDirection(Servo.Direction.FORWARD);
@@ -633,6 +647,7 @@ public class BetaAuto extends OpMode {
         telemetry.addData("finger pos: ", fingerLeft.getPosition() + " " + fingerRight.getPosition() + "\n");
         telemetry.addData("personDropper pos: ", personDropper.getPosition() + "\n");
         telemetry.addData("enc: ", motorFrontLeft.getCurrentPosition() + " " + motorFrontRight.getCurrentPosition() + "\n");
+        telemetry.addData("target pos: ", targetPosition + "\n");
         //telemetry.addData("mode", motorFrontLeft.getMode() + " " + motorFrontRight.getMode());
         telemetry.addData("gyro: ", " cur " + gyroReader.curHeading + " dest " + destHeading + " degsToTurn " + degreesToTurn + "\n");
 
@@ -640,7 +655,7 @@ public class BetaAuto extends OpMode {
 
     // TODO the values in the parentheses still have to be changed as the robot is tested
     // put everything that should have been in the loop method (the switch statement)
-    void beacon() {
+    void beacon(boolean climbMountain) {
         switch (currentStep) {
             case IDLE:
                 break;
@@ -666,15 +681,18 @@ public class BetaAuto extends OpMode {
                 break;
             case DROP_PERSON:
                 if (!dropPerson()) {
-                    currentStep = autoStep.STOP;
+                    currentStep = autoStep.GET_TIME;
                 }
+                break;
+            case CLIMB_MOUNTAIN:
+                if (climbMountain) { beaconToMountain(); }
                 break;
             case GET_TIME:
                 finishedTime = System.currentTimeMillis();
                 currentStep = autoStep.STOP;
                 break;
             case STOP:
-                telemetry.addData("", (finishedTime - startOpModeTime)/1000);
+                telemetry.addData("Total time: ", (finishedTime - startOpModeTime)/1000);
                 break;
         }
     }
@@ -695,6 +713,40 @@ public class BetaAuto extends OpMode {
                 break;
             case STOP:
                 telemetry.addData("", (finishedTime - startOpModeTime) / 1000);
+                break;
+        }
+    }
+    void beaconToMountain() {
+        switch (currentStep) {
+            case IDLE:
+                break;
+            case FORWARD_1: //back up from beacon
+                if (!moveDistance(-3.0, 0.3)) {
+                    currentStep = autoStep.TURN_1;
+                }
+                break;
+            case TURN_1: //turn 180 degs
+                if (!gyroTurn(180)) {
+                    currentStep = autoStep.FORWARD_2;
+                }
+                break;
+            case FORWARD_2: //continue moving away from beacon
+                if (!moveDistance(18.0, 0.3)) { //TODO move how much?
+                    currentStep = autoStep.TURN_2;
+                }
+                break;
+            case TURN_2: //turn towards the mountain
+                if (!gyroTurn(isRed? -135 : 135)) {
+                    currentStep = autoStep.FORWARD_3;
+                }
+                break;
+            case FORWARD_3: //move up
+                if (!moveDistance(18.0, 0.3)) {
+                    currentStep = autoStep.STOP;
+                }
+                break;
+            case STOP:
+                //teleopMode();
                 break;
         }
     }

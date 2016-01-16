@@ -45,9 +45,9 @@ public class FtcConfig {
 
     public enum AutonType {
         GO_FOR_BEACON,
-        TEST;
+        TEST,
         //GO_FOR_MOUNTAIN,
-        //GO_FOR_BOTH;
+        GO_FOR_BOTH;
         private static AutonType[] vals = values();
         public AutonType next() { return vals[(this.ordinal()+1) % vals.length];}
         public AutonType prev() { return vals[(this.ordinal()-1+vals.length) % vals.length];}

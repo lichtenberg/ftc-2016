@@ -1,12 +1,5 @@
 package com.qualcomm.ftcrobotcontroller.opmodes;
 
-import com.qualcomm.robotcore.hardware.ColorSensor;
-import com.qualcomm.ftccommon.DbgLog;
-import com.qualcomm.robotcore.eventloop.opmode.OpMode;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.Servo;
-import java.lang.Object;
-
 /**
  * Created by Aden on 11/29/2015.
  */
@@ -47,8 +40,14 @@ public class BetaTest extends BetaAuto {
 
     @Override
     public void loop() {
-        telemetry.addData("push the left button? ", ifPushLeftButton());
+        //telemetry.addData("push the left button? ", ifPushLeftButton() + "\n");
+        telemetry.addData("detected the line? :", colorSensorL.alpha() + " " + (colorSensorL.alpha() > (blackBaseLine + LINE_ALPHA)));
+        telemetry.addData("turn left?", colorSensorL.alpha() > (blackBaseLine + LINE_ALPHA));
         //setPushButtonPosition();
+        test();
+    }
+
+    void test() {
         switch (currentStep) {
             case DELAY:
                 currentStep = autoStep.FOLLOW_LINE;
@@ -62,7 +61,5 @@ public class BetaTest extends BetaAuto {
             case STOP:
                 break;
         }
-        lineFollower();
     }
-
 }
