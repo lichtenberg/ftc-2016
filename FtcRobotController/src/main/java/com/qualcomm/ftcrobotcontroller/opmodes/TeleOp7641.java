@@ -55,8 +55,8 @@ public class TeleOp7641 extends OpMode{
 		 * configured your robot and created the configuration file.
 		 */
 		motorRightPrimary = hardwareMap.dcMotor.get("motor-fr");
-		motorLeftPrimary = hardwareMap.dcMotor.get("motor-br");
-		motorRightSecondary = hardwareMap.dcMotor.get("motor-fl");
+		motorLeftPrimary = hardwareMap.dcMotor.get("motor-fl");
+		motorRightSecondary = hardwareMap.dcMotor.get("motor-br");
 		motorLeftSecondary = hardwareMap.dcMotor.get("motor-bl");
         zipServoRight = hardwareMap.servo.get("servo-rzip");
 		zipServoLeft = hardwareMap.servo.get("servo-lzip");
@@ -106,8 +106,8 @@ public class TeleOp7641 extends OpMode{
 
 
         // tank drive
-        float left = -gamepad1.left_stick_y;
-        float right = -gamepad1.right_stick_y;
+        float left = gamepad1.left_stick_y;
+        float right = gamepad1.right_stick_y;
         // clip the right/left values so that the values never exceed +/- 1
         right = Range.clip(right, -1, 1);
         left = Range.clip(left, -1, 1);
