@@ -40,9 +40,10 @@ public class BetaTest extends BetaAuto {
 
     @Override
     public void loop() {
-        //telemetry.addData("push the left button? ", ifPushLeftButton() + "\n");
-        telemetry.addData("detected the line? :", colorSensorL.alpha() + " " + (colorSensorL.alpha() > (blackBaseLine + LINE_ALPHA)));
-        telemetry.addData("turn left?", colorSensorL.alpha() > (blackBaseLine + LINE_ALPHA));
+        //isRed = true;
+        telemetry.addData("push the left button? ", ifPushLeftButton() + "\n");
+        telemetry.addData("detected the line? :", colorSensorL.alpha() + " " + lineDetected);
+        telemetry.addData("turn left?", colorSensorL.alpha() >= (blackBaseLine + LINE_ALPHA));
         //setPushButtonPosition();
         test();
     }
