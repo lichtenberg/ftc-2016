@@ -92,7 +92,7 @@ public class TeleOp7641 extends OpMode{
 		// Zipline Trigger Left
 		zipServoLeft.setPosition(zipPositionLeft);
 		if (gamepad2.x && !oldX) {
-			zipPositionLeft = (zipPositionLeft != ZIP_CLOSED) ? ZIP_CLOSED : ZIP_OPEN;
+			zipPositionLeft = (zipPositionLeft != ZIP_OPEN) ? ZIP_OPEN : ZIP_CLOSED;
 		}
 		oldX = gamepad2.x;
         // Person Dropper
