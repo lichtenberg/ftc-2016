@@ -56,7 +56,6 @@ public class TeleOp7641 extends OpMode{
 		 */
 		motorRightPrimary = hardwareMap.dcMotor.get("motor-fr");
 		motorLeftPrimary = hardwareMap.dcMotor.get("motor-fl");
-
 		motorRightSecondary = hardwareMap.dcMotor.get("motor-br");
 		motorLeftSecondary = hardwareMap.dcMotor.get("motor-bl");
         zipServoRight = hardwareMap.servo.get("servo-rzip");
@@ -93,7 +92,7 @@ public class TeleOp7641 extends OpMode{
 		// Zipline Trigger Left
 		zipServoLeft.setPosition(zipPositionLeft);
 		if (gamepad2.x && !oldX) {
-			zipPositionLeft = (zipPositionLeft != ZIP_CLOSED) ? ZIP_CLOSED : ZIP_OPEN;
+			zipPositionLeft = (zipPositionLeft != ZIP_OPEN) ? ZIP_OPEN : ZIP_CLOSED;
 		}
 		oldX = gamepad2.x;
         // Person Dropper
