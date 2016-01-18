@@ -54,9 +54,10 @@ public class BetaAuto extends OpMode {
     //
     // The member variables below are used when we are following a line.
     //
-    final static double LINE_FOLLOW_SPEED = 0.15;
+    final static double LINE_FOLLOW_SPEED = 0.20;
+    final static double OTHER_WHEEL_SPEED = -0.1;
     int blackBaseLine = 0;
-    final static int LINE_ALPHA = 20;
+    final static int LINE_ALPHA = 1;
     boolean lineDetected = false;
     boolean lineFollowerIsRunning = false;
 
@@ -276,11 +277,8 @@ public class BetaAuto extends OpMode {
             int lineSensor = colorSensorL.alpha(); // Get the amount of light detected by the sensor as an int
             //int lineSensor = distanceSensor.getLightDetectedRaw(); // Get the amount of light detected by the sensor as an int
 
-            if (lineSensor > (blackBaseLine + LINE_ALPHA) && !lineDetected) { // TODO add noise ignoring code
+            if (lineSensor >= (blackBaseLine + LINE_ALPHA) && !lineDetected) { // TODO add noise ignoring code
                 DbgLog.msg("LINE_FOLLOW:  Detected the line");
-                int distanceInEncoderCounts = inchesToEncoder(24);
-                targetPosition = (motorFrontLeft.getCurrentPosition() + distanceInEncoderCounts);
-                targetPosition = (motorFrontRight.getCurrentPosition() + distanceInEncoderCounts);
                 lineDetected = true;
             }
             if (!lineDetected) {
@@ -289,7 +287,9 @@ public class BetaAuto extends OpMode {
                 motorFrontRight.setPower(0.10);
                 motorBackRight.setPower(0.10);
                 motorBackLeft.setPower(0.10);
-            } else if (lineDetected && (motorFrontRight.getCurrentPosition()) >= targetPosition) {
+            } else if (lineDetected && (System.currentTimeMillis() - startOpModeTime) >= 20000) {
+                // if the line is detected and there is only 10 seconds left
+                // it goes straight to DROP_PERSON
                 motorFrontLeft.setPower(0);
                 motorFrontRight.setPower(0);
                 motorBackLeft.setPower(0);
@@ -306,21 +306,21 @@ public class BetaAuto extends OpMode {
                     fingerRight.setPosition(BUTTON_NOTPRESSED);
                 }
                 // it will turn right instead of left on detecting the line while on blue team
-                // isRed, detect line --> left (true)
-                // isRed, not detect line --> right (false)
-                // not isRed, detect line --> right (false)
-                // not isRed, not detect line --> left (true)
-                //if (!(isRed ^ lineSensor > (blackBaseLine + LINE_ALPHA))) { // light detected
-                if (lineSensor > (blackBaseLine + LINE_ALPHA)) {
-                    motorFrontLeft.setPower(0);
+                // not isRed (t), detect line --> left (true)
+                // not isRed (t), not detect line --> right (false)
+                // isRed (f), detect line --> right (false)
+                // isRed (f), not detect line --> left (true)
+                if (!(!isRed ^ lineSensor >= (blackBaseLine + LINE_ALPHA))) { // light detected
+                //if (lineSensor >= (blackBaseLine + LINE_ALPHA)) {
+                    motorFrontLeft.setPower(OTHER_WHEEL_SPEED);
                     motorFrontRight.setPower(LINE_FOLLOW_SPEED);
-                    motorBackLeft.setPower(0);
+                    motorBackLeft.setPower(OTHER_WHEEL_SPEED);
                     motorBackRight.setPower(LINE_FOLLOW_SPEED);
                 } else {
                     motorFrontLeft.setPower(LINE_FOLLOW_SPEED);
-                    motorFrontRight.setPower(0);
+                    motorFrontRight.setPower(OTHER_WHEEL_SPEED);
                     motorBackLeft.setPower(LINE_FOLLOW_SPEED);
-                    motorBackRight.setPower(0);
+                    motorBackRight.setPower(OTHER_WHEEL_SPEED);
                 }
             }
         } else {
@@ -397,7 +397,7 @@ public class BetaAuto extends OpMode {
 
     public boolean dropPerson() {
         if (droppingPerson) {
-            while (delay(1)) { }
+            while (delay(1)) { } // its fine if the loop is empty
             personDropper.setPosition(PERSON_NOT_DROPPED);
             droppingPerson = false;
         } else {
@@ -620,7 +620,7 @@ public class BetaAuto extends OpMode {
     //@Override
     public void loop() {
 
-        // We update the gyro's currentHeading each time the loop is called.
+        // We update the gyro's curretHeading each time the loop is called.
         // It runs on its own, we query the current compass position by reading the
         // latest value that checkGyro gets from the compass.
         gyroReader.checkGyro();
@@ -644,12 +644,14 @@ public class BetaAuto extends OpMode {
         telemetry.addData("TIME LEFT", 30 - ((System.currentTimeMillis() - startOpModeTime) / 1000) + "\n");
         telemetry.addData("currentStep: ", currentStep + "\n");
         telemetry.addData("autonType: ", autonType + "\n");
-        telemetry.addData("finger pos: ", fingerLeft.getPosition() + " " + fingerRight.getPosition() + "\n");
-        telemetry.addData("personDropper pos: ", personDropper.getPosition() + "\n");
+        telemetry.addData("push the left button? ", ifPushLeftButton() + "\n");
+        telemetry.addData("detected the line? :", colorSensorL.alpha() + " " + lineDetected);
+        telemetry.addData("turn left?", colorSensorL.alpha() >= (blackBaseLine + LINE_ALPHA));
         telemetry.addData("enc: ", motorFrontLeft.getCurrentPosition() + " " + motorFrontRight.getCurrentPosition() + "\n");
         telemetry.addData("target pos: ", targetPosition + "\n");
-        //telemetry.addData("mode", motorFrontLeft.getMode() + " " + motorFrontRight.getMode());
         telemetry.addData("gyro: ", " cur " + gyroReader.curHeading + " dest " + destHeading + " degsToTurn " + degreesToTurn + "\n");
+        telemetry.addData("finger pos: ", fingerLeft.getPosition() + " " + fingerRight.getPosition() + "\n");
+        telemetry.addData("personDropper pos: ", personDropper.getPosition() + "\n");
 
     }
 
@@ -666,11 +668,6 @@ public class BetaAuto extends OpMode {
                 break;
             case FORWARD_1:
                 if (!moveDistance(70)) {
-                    currentStep = autoStep.TURN_1;
-                }
-                break;
-            case TURN_1:
-                if (!gyroTurn(isRed ? 15 : -15)) {
                     currentStep = autoStep.FOLLOW_LINE;
                 }
                 break;
@@ -681,12 +678,27 @@ public class BetaAuto extends OpMode {
                 break;
             case DROP_PERSON:
                 if (!dropPerson()) {
-                    currentStep = autoStep.GET_TIME;
+                    currentStep = autoStep.CLIMB_MOUNTAIN;
                 }
                 break;
             case CLIMB_MOUNTAIN:
-                if (climbMountain) { beaconToMountain(); }
+                if (climbMountain) { currentStep = autoStep.FORWARD_2; }
+                else { currentStep = autoStep.GET_TIME; }
                 break;
+            case FORWARD_2:
+                if (!moveDistance(-36)) {
+                    currentStep = autoStep.TURN_2;
+                }
+                break;
+            case TURN_2:
+                if (gyroTurn(45)) {
+                    currentStep = autoStep.FORWARD_3;
+                }
+                break;
+            case FORWARD_3:
+                if (!moveDistance(36)) {
+                    currentStep = autoStep.GET_TIME;
+                }
             case GET_TIME:
                 finishedTime = System.currentTimeMillis();
                 currentStep = autoStep.STOP;
