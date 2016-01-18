@@ -63,8 +63,8 @@ public class TeleOp7641 extends OpMode{
         personDropperServo = hardwareMap.servo.get("servo-person");
         oldB = false;
 		oldX = false;
-        motorRightPrimary.setDirection(DcMotor.Direction.REVERSE);
-        motorLeftSecondary.setDirection(DcMotor.Direction.REVERSE);
+        motorLeftPrimary.setDirection(DcMotor.Direction.REVERSE);
+        motorRightSecondary.setDirection(DcMotor.Direction.REVERSE);
 
 	}
 
@@ -106,8 +106,8 @@ public class TeleOp7641 extends OpMode{
 
 
         // tank drive
-        float left = gamepad1.left_stick_y;
-        float right = gamepad1.right_stick_y;
+        float left = -gamepad1.left_stick_y;
+        float right = -gamepad1.right_stick_y;
         // clip the right/left values so that the values never exceed +/- 1
         right = Range.clip(right, -1, 1);
         left = Range.clip(left, -1, 1);
