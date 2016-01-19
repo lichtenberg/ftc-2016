@@ -32,20 +32,13 @@ public class BetaTest extends OpMode {
 
 public class BetaTest extends BetaAuto {
 
-    //@Override
-    public boolean ifPushLeftButtonZZZ() {
-        beaconLeftIsBlue = (colorSensorB.blue() > 1);
-        return !(beaconLeftIsBlue ^ !isRed); // check if the left beacon matches the team color XNOR (NOT(XOR))
-    }
-
     @Override
     public void loop() {
         //isRed = true;
-        telemetry.addData("push the left button? ", ifPushLeftButton() + "\n");
-        telemetry.addData("detected the line? :", colorSensorL.alpha() + " " + lineDetected);
-        telemetry.addData("turn left?", colorSensorL.alpha() >= (blackBaseLine + LINE_ALPHA));
+
+        showTelemetry();
         //setPushButtonPosition();
-        test();
+        //test();
     }
 
     void test() {
