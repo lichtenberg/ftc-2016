@@ -22,8 +22,8 @@ public class TeleOp7641 extends OpMode{
     final static double ZIP_OPEN = 0.5;
     final static double ZIP_CLOSED = 1.0;
 
-    Boolean oldB;
-	Boolean oldX;
+    boolean oldB;
+	boolean oldX;
 	DcMotor motorRightPrimary;
 	DcMotor motorRightSecondary;
 	DcMotor motorLeftPrimary;
@@ -44,7 +44,7 @@ public class TeleOp7641 extends OpMode{
 
 	/*
 	 * Code to run when the op mode is first enabled goes here
-	 * 
+	 *
 	 * @see com.qualcomm.robotcore.eventloop.opmode.OpMode#start()
 	 */
 	@Override
@@ -65,7 +65,7 @@ public class TeleOp7641 extends OpMode{
         oldB = false;
 		oldX = false;
         motorLeftPrimary.setDirection(DcMotor.Direction.REVERSE);
-        motorRightSecondary.setDirection(DcMotor.Direction.REVERSE);
+        motorLeftSecondary.setDirection(DcMotor.Direction.REVERSE);
 
 	}
 
@@ -96,7 +96,7 @@ public class TeleOp7641 extends OpMode{
 		oldX = gamepad2.x;
         // Person Dropper
 
-        if (gamepad2.y == true) {
+        if (gamepad2.y) {
             personPosition = 0.0;
         }
         else {
@@ -195,5 +195,4 @@ public class TeleOp7641 extends OpMode{
 		// return scaled value.
 		return dScale;
 	}
-
 }
