@@ -653,6 +653,8 @@ public class BetaAuto extends OpMode {
         // ftcConfig.param.autonType.TEST will yield access via static message
         if (autonType == FtcConfig.AutonType.GO_FOR_BEACON) {
             beacon();
+        } else if (autonType == FtcConfig.AutonType.BEACON_FLOORZONE) {
+            beaconFloorZone();
         } else if (autonType == FtcConfig.AutonType.TEST) {
             test();
         } else if (autonType == FtcConfig.AutonType.BEACON_MOUNTAIN) {
