@@ -328,6 +328,7 @@ public class BetaAuto extends OpMode {
                     motorFrontRight.setPower(OTHER_WHEEL_SPEED);
                     motorBackLeft.setPower(LINE_FOLLOW_SPEED);
                     motorBackRight.setPower(OTHER_WHEEL_SPEED);
+
                 }
             }
         } else {
