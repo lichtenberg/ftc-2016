@@ -32,8 +32,9 @@ public class TeleOp7641 extends OpMode{
 	Servo zipServoLeft;
 	Servo personDropperServo;
 
+
     double zipPositionRight;
-	double zipPositionLeft;
+    double zipPositionLeft;
     double personPosition;
 	/**
 	 * Constructor
@@ -56,6 +57,7 @@ public class TeleOp7641 extends OpMode{
 		 */
 		motorRightPrimary = hardwareMap.dcMotor.get("motor-fr");
 		motorLeftPrimary = hardwareMap.dcMotor.get("motor-fl");
+
 		motorRightSecondary = hardwareMap.dcMotor.get("motor-br");
 		motorLeftSecondary = hardwareMap.dcMotor.get("motor-bl");
         zipServoRight = hardwareMap.servo.get("servo-rzip");
@@ -65,40 +67,27 @@ public class TeleOp7641 extends OpMode{
 		oldX = false;
         motorLeftPrimary.setDirection(DcMotor.Direction.REVERSE);
         motorLeftSecondary.setDirection(DcMotor.Direction.REVERSE);
-
 	}
 
     public void init_loop() {
 
-        zipServoRight.setPosition(ZIP_CLOSED);
-        zipPositionRight = ZIP_CLOSED;
-		zipServoLeft.setPosition(ZIP_CLOSED);
-		zipPositionLeft = ZIP_CLOSED;
-        personDropperServo.setPosition(0.8);
-        personPosition =  0.8;
 
     }
 	@Override
 	public void loop() {
 
-        // Zipline Trigger Right
-        zipServoRight.setPosition(zipPositionRight);
-        if (gamepad2.b && !oldB) {
-            zipPositionRight = (zipPositionRight != ZIP_CLOSED) ? ZIP_CLOSED : ZIP_OPEN;
+
+        if (gamepad2.right_trigger > 0){
+            zipServoRight.setPosition(gamepad2.right_trigger);
         }
-        oldB = gamepad2.b;
 
+        if (gamepad2.left_trigger > 0){
+            zipServoLeft.setPosition(gamepad2.left_trigger);
+        }
 
-		// Zipline Trigger Left
-		zipServoLeft.setPosition(zipPositionLeft);
-		if (gamepad2.x && !oldX) {
-			zipPositionLeft = (zipPositionLeft != ZIP_OPEN) ? ZIP_OPEN : ZIP_CLOSED;
-		}
-		oldX = gamepad2.x;
         // Person Dropper
-
         if (gamepad2.y) {
-            personPosition = 0.0;
+            personDropperServo.setPosition(0.0);
         }
         else {
             personDropperServo.setPosition(0.8);
@@ -126,7 +115,19 @@ public class TeleOp7641 extends OpMode{
 		// Driver Control Features
 		//--------------------------------------------------------------------
 
+        if (gamepad1.a){
+            motorRightPrimary.setPower(1.0);
+            motorRightSecondary.setPower(1.0);
+            motorLeftPrimary.setPower(1.0);
+            motorLeftSecondary.setPower(1.0);
+        }
 
+        if (gamepad1.b){
+            motorRightPrimary.setPower(0.5);
+            motorRightSecondary.setPower(0.5);
+            motorLeftPrimary.setPower(0.5);
+            motorLeftSecondary.setPower(0.5);
+        }
 
         // On left trigger push, turn left
         if (gamepad1.left_trigger > 0) {
@@ -159,8 +160,6 @@ public class TeleOp7641 extends OpMode{
 	@Override
 	public void stop() {
         personDropperServo.setPosition(0.8);
-        zipServoRight.setPosition(ZIP_CLOSED);
-		zipServoLeft.setPosition(ZIP_CLOSED);
 	}
 	
 	/*
