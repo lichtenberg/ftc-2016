@@ -55,7 +55,10 @@ public class SAuto7641 extends OpMode {
     // The member variables below are used when we are following a line.
     //
 
+	final static double LINE_FOLLOW_SPEED = 0.20;
+	final static double OTHER_WHEEL_SPEED = -0.1;
     int blackBaseLine = 0;
+	final static int LINE_ALPHA = 1;
 	Boolean lineDetected = false;
 	Boolean lineFollowerIsRunning = false;
 
@@ -76,6 +79,7 @@ public class SAuto7641 extends OpMode {
     double encoderCountsPerRevolution = 1120; // This is the number of encoder counts per turn of the output shaft
 
 	Boolean moveDistanceIsRunning = false;
+	long startOpModeTime;
 
     //
     // The member variables below are for holding the current "state" of our program.
@@ -315,12 +319,7 @@ public class SAuto7641 extends OpMode {
 	}
 
 
-	//
-	// This is the line sensor follower step.
-	//
-
-	private Boolean lineFollower()
-	{
+	public boolean lineFollower() {
 		//
 		// If we have not detected the line yet, keep going
 		// at 0.25 power.   Once we see the white line,
@@ -328,64 +327,61 @@ public class SAuto7641 extends OpMode {
 
 		if (lineFollowerIsRunning) {
 
-			int lineSensor = distanceSensor.getLightDetectedRaw();
+			int lineSensor = colorSensor2.alpha(); // Get the amount of light detected by the sensor as an int
+			//int lineSensor = distanceSensor.getLightDetectedRaw(); // Get the amount of light detected by the sensor as an int
 
-			if (lineSensor > (blackBaseLine + 50)) {
-				if (!lineDetected) {
-					DbgLog.msg("LINE_FOLLOW:  Detected the line");
-
-					lineDetected = true;
-				}
+			if (lineSensor >= (blackBaseLine + LINE_ALPHA) && !lineDetected) { // TODO add noise ignoring code
+				DbgLog.msg("LINE_FOLLOW:  Detected the line");
+				lineDetected = true;
 			}
-
 			if (!lineDetected) {
-				// Line not detected yet.   Keep going straight.
-				motorLeftPrimary.setPower(0.20);
-				motorRightPrimary.setPower(0.20);
-				motorLeftSecondary.setPower(0.20);
-				motorRightSecondary.setPower(0.20);
-			} else {
-
-				// Line has been detected.   If we see the line, turn one way.
-				// If we do not see the line, turn the other way.
-				// The robot will oscillate as it follows the line.
-
-				if (lineSensor > (blackBaseLine + 50)) { // light detected
-					lineDetected = true;
-					motorLeftPrimary.setPower(0);
-					motorRightPrimary.setPower(0.15);
-					motorLeftSecondary.setPower(0);
-					motorRightSecondary.setPower(0.15);
-				} else {
-					motorLeftPrimary.setPower(0.15);
-					motorRightPrimary.setPower(0);
-					motorLeftSecondary.setPower(0.15);
-					motorRightSecondary.setPower(0);
-				}
-
-			}
-			//
-			// If we hit the wall, we will use our touch sensor to stop this step.
-			// We will monitor the touch sensor even if we haven't found the line yet,
-			// just in case we miss the line entirely and slam into the wall.
-			//
-
-			if (touchSensor.isPressed()) {
-				DbgLog.msg("LINE_FOLLOW:  touch sensor activated, stopping");
-
+				// Line not detected yet. Keep going straight.
+				motorLeftPrimary.setPower(0.10);
+				motorRightPrimary.setPower(0.10);
+				motorRightSecondary.setPower(0.10);
+				motorLeftSecondary.setPower(0.10);
+			} else if (lineDetected && (System.currentTimeMillis() - startOpModeTime) >= 20000) {
+				// if the line is detected and there is only 10 seconds left
+				// it goes straight to DROP_PERSON
 				motorLeftPrimary.setPower(0);
 				motorRightPrimary.setPower(0);
-				motorLeftSecondary.setPower(0);
+				motorRightSecondary.setPower(0);
 				motorRightSecondary.setPower(0);
 				lineFollowerIsRunning = false;
-			}
+			} else {
+				// Line has been detected.   If we see the line, turn one way. (left, in the case of red team)
+				// If we do not see the line, turn the other way. (right)
+				// The robot will oscillate as it follows the line.
+				//if (pushButton) pushTheButton(); // pushButton is from ftcConfig settings
+				if (pushButton) pushTheButton();
+				else {
+					fingerLeft.setPosition(BUTTON_NOTPRESSED);
+					fingerRight.setPosition(BUTTON_NOTPRESSED);
+				}
+				// it will turn right instead of left on detecting the line while on blue team
+				// not isRed (t), detect line --> left (true)
+				// not isRed (t), not detect line --> right (false)
+				// isRed (f), detect line --> right (false)
+				// isRed (f), not detect line --> left (true)
+				if (!(!isRed ^ lineSensor >= (blackBaseLine + LINE_ALPHA))) { // light detected
+					//if (lineSensor >= (blackBaseLine + LINE_ALPHA)) {
+					motorLeftPrimary.setPower(OTHER_WHEEL_SPEED);
+					motorRightPrimary.setPower(LINE_FOLLOW_SPEED);
+					motorRightSecondary.setPower(OTHER_WHEEL_SPEED);
+					motorRightSecondary.setPower(LINE_FOLLOW_SPEED);
+				} else {
+					motorLeftPrimary.setPower(LINE_FOLLOW_SPEED);
+					motorRightPrimary.setPower(OTHER_WHEEL_SPEED);
+					motorRightSecondary.setPower(LINE_FOLLOW_SPEED);
+					motorRightSecondary.setPower(OTHER_WHEEL_SPEED);
 
+				}
+			}
 		} else {
+			lineDetected = false;
 			lineFollowerIsRunning = true;
 		}
-
 		return lineFollowerIsRunning;
-
 	}
 
 	public void pushTheButton() {
