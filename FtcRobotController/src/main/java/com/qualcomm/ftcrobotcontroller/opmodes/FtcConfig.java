@@ -47,7 +47,8 @@ public class FtcConfig {
         GO_FOR_BEACON,
         BEACON_FLOORZONE,
         BEACON_MOUNTAIN,
-        TEST;
+        TEST,
+        TELEMETRY_ONLY;
         private static AutonType[] vals = values();
         public AutonType next() { return vals[(this.ordinal()+1) % vals.length];}
         public AutonType prev() { return vals[(this.ordinal()-1+vals.length) % vals.length];}

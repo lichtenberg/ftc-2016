@@ -31,6 +31,7 @@ public class BetaAuto extends OpMode {
     Servo personDropper;
     Servo zipServoLeft;
     Servo zipServoRight;
+    Servo blade;
 
     //
     // The member variables used in servos
@@ -41,6 +42,8 @@ public class BetaAuto extends OpMode {
     final static double R_ZIP_CLOSED = 0.8;
     final static double PERSON_DROPPED = 0;
     final static double PERSON_NOT_DROPPED = 0.8;
+    final static double SHOVEL_DOWN = 0;
+    final static double SHOVEL_UP = 0;
 
     //
     // The member variables below are used for when we are executing a turn.
@@ -143,6 +146,7 @@ public class BetaAuto extends OpMode {
         fingerLeft.setDirection(Servo.Direction.REVERSE);
         zipServoRight = hardwareMap.servo.get("servo-rzip");
         zipServoLeft = hardwareMap.servo.get("servo-lzip");
+        blade = hardwareMap.servo.get("blade");
 
 
         /*
@@ -655,10 +659,10 @@ public class BetaAuto extends OpMode {
             beacon();
         } else if (autonType == FtcConfig.AutonType.BEACON_FLOORZONE) {
             beaconFloorZone();
-        } else if (autonType == FtcConfig.AutonType.TEST) {
-            test();
         } else if (autonType == FtcConfig.AutonType.BEACON_MOUNTAIN) {
             beaconMountain();
+        } else if (autonType == FtcConfig.AutonType.TEST) {
+            test();
         }
 
         fingerRight.setDirection(Servo.Direction.FORWARD);
@@ -730,7 +734,7 @@ public class BetaAuto extends OpMode {
                 }
                 break;
             case FORWARD_1:
-                if (!moveDistance(70)) {
+                if (!moveDistance(65)) {
                     currentStep = autoStep.FOLLOW_LINE;
                 }
                 break;
@@ -741,16 +745,16 @@ public class BetaAuto extends OpMode {
                 break;
             case DROP_PERSON:
                 if (!dropPerson()) {
-                    currentStep = autoStep.CLIMB_MOUNTAIN;
+                    currentStep = autoStep.FORWARD_2;
                 }
                 break;
             case FORWARD_2:
-                if (!moveDistance(6)) {
+                if (!moveDistance(-6)) {
                     currentStep = autoStep.TURN_2;
                 }
                 break;
             case TURN_2:
-                if (!gyroTurn(80)) {
+                if (!gyroTurn(isRed ? 80 : -80)) {
                     currentStep = autoStep.FORWARD_3;
                 }
                 break;
