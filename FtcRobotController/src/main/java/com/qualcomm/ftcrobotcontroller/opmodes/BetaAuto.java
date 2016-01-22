@@ -42,8 +42,8 @@ public class BetaAuto extends OpMode {
     final static double R_ZIP_CLOSED = 0.8;
     final static double PERSON_DROPPED = 0;
     final static double PERSON_NOT_DROPPED = 0.8;
-    final static double SHOVEL_DOWN = 0;
-    final static double SHOVEL_UP = 0;
+    final static double BLADE_DOWN = 0;
+    final static double BLADE_UP = 0.9;
 
     //
     // The member variables below are used for when we are executing a turn.
@@ -630,6 +630,7 @@ public class BetaAuto extends OpMode {
         zipServoLeft.setPosition(L_ZIP_CLOSED);
         zipServoRight.setPosition(R_ZIP_CLOSED);
         personDropper.setPosition(PERSON_NOT_DROPPED);
+        blade.setPosition(BLADE_UP);
         startOpModeTime = System.currentTimeMillis();
     }
 
@@ -674,19 +675,20 @@ public class BetaAuto extends OpMode {
     public void showTelemetry() {
         telemetry.addData("TIME ELAPSED", (System.currentTimeMillis() - startOpModeTime) / 1000 + "\n");
         telemetry.addData("TIME LEFT", 30 - ((System.currentTimeMillis() - startOpModeTime) / 1000) + "\n");
-        telemetry.addData("currentStep", currentStep + "\n");
-        telemetry.addData("autonType", autonType + "\n");
-        telemetry.addData("push the left button? ", ifPushLeftButton() + "\n");
+        telemetry.addData("currentStep", currentStep);
+        telemetry.addData("autonType", autonType);
+        telemetry.addData("team", (isRed ? "red" : "blue") + "\n");
+        telemetry.addData("push the left button? ", ifPushLeftButton());
         telemetry.addData("detected the line? ", colorSensorL.alpha() + " " + lineDetected);
-        telemetry.addData("turn left? ", colorSensorL.alpha() >= (blackBaseLine + LINE_ALPHA));
-        telemetry.addData("enc", motorFrontLeft.getCurrentPosition() + " " + motorFrontRight.getCurrentPosition() + "\n");
-        telemetry.addData("target pos", targetPosition + "\n");
+        telemetry.addData("turn left? ", (colorSensorL.alpha() >= (blackBaseLine + LINE_ALPHA)) + "\n");
+        telemetry.addData("enc", motorFrontLeft.getCurrentPosition() + " " + motorFrontRight.getCurrentPosition());
+        telemetry.addData("target pos", targetPosition);
         telemetry.addData("gyro", " cur " + gyroReader.curHeading + " dest " + destHeading + " degsToTurn " + degreesToTurn + "\n");
         telemetry.addData("l-finger pos", fingerLeft.getPosition());
-        telemetry.addData("r-finger pos", fingerRight.getPosition() + "\n");
-        telemetry.addData("personDropper pos", personDropper.getPosition() + "\n");
+        telemetry.addData("r-finger pos", fingerRight.getPosition());
+        telemetry.addData("personDropper pos", personDropper.getPosition());
         telemetry.addData("l-zip pos", zipServoLeft.getPosition());
-        telemetry.addData("r-zip pos", zipServoRight.getPosition() + "\n");
+        telemetry.addData("r-zip pos", zipServoRight.getPosition());
     }
 
     // TODO the values in the parentheses still have to be changed as the robot is tested
@@ -760,6 +762,7 @@ public class BetaAuto extends OpMode {
                 break;
             case FORWARD_3:
                 if (!moveDistance(18)) {
+                    blade.setPosition(BLADE_DOWN);
                     currentStep = autoStep.GET_TIME;
                 }
                 break;

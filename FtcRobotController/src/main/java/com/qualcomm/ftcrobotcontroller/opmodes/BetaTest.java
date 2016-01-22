@@ -37,11 +37,11 @@ public class BetaTest extends BetaAuto {
         //isRed = true;
 
         showTelemetry();
-        //setPushButtonPosition();
-        //test();
+        test();
     }
 
     void test() {
+        /*
         switch (currentStep) {
             case DELAY:
                 currentStep = autoStep.FOLLOW_LINE;
@@ -53,6 +53,18 @@ public class BetaTest extends BetaAuto {
                 if (!dropPerson()) currentStep = autoStep.STOP;
                 break;
             case STOP:
+                break;
+        }
+        */
+        switch (currentStep) {
+            case DELAY:
+                blade.setPosition(0);
+                if (!delay(1)) {
+                    currentStep = autoStep.FORWARD_1;
+                }
+                break;
+            case FORWARD_1:
+                blade.setPosition(0.9);
                 break;
         }
     }
