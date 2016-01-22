@@ -89,6 +89,7 @@ public class BetaAuto extends OpMode {
     boolean droppingPerson = false;
     boolean moveDistanceIsRunning = false;
     boolean pushDebrisIsRunning = false;
+    autoStep pushDebrisStep = autoStep.IDLE;
 
     boolean isRed;
     boolean startNearMountain;
@@ -338,24 +339,6 @@ public class BetaAuto extends OpMode {
         return lineFollowerIsRunning;
     }
 
-    public boolean pushDebris() {
-        if (pushDebrisIsRunning) {
-            if (colorSensorL.alpha() >= (blackBaseLine + LINE_ALPHA) && !lineDetected) { // TODO add noise ignoring code
-                DbgLog.msg("LINE_FOLLOW:  Detected the line");
-                lineDetected = true;
-            }
-            if (lineDetected) {
-                while (moveDistance(10)) { }
-                while (moveDistance(-12)) { }
-                pushDebrisIsRunning = false;
-            }
-        } else {
-            lineDetected = false;
-            pushDebrisIsRunning = true;
-        }
-        return pushDebrisIsRunning;
-    }
-
     public void setPushButtonPosition() {
         // Determines if the robot should push the left button or the right one
         // and extends the corresponding finger
@@ -432,6 +415,43 @@ public class BetaAuto extends OpMode {
             droppingPerson = true;
         }
         return droppingPerson;
+    }
+
+    public boolean pushDebris() {
+        if (pushDebrisIsRunning) {
+            switch (pushDebrisStep) {
+                case IDLE:
+                    pushDebrisStep = autoStep.FOLLOW_LINE;
+                    break;
+                case FOLLOW_LINE:
+                    motorFrontLeft.setPower(0.1);
+                    motorFrontRight.setPower(0.1);
+                    motorBackRight.setPower(0.1);
+                    motorBackLeft.setPower(0.1);
+                    int lineSensor = colorSensorL.alpha(); // Get the amount of light detected by the sensor as an int
+                    if (lineSensor >= (blackBaseLine + LINE_ALPHA)) { // TODO add noise ignoring code
+                        pushDebrisStep = autoStep.FORWARD_1;
+                    }
+                    break;
+                case FORWARD_1:
+                    if (!moveDistance(12)) {
+                        pushDebrisStep = autoStep.FORWARD_2;
+                    }
+                    break;
+                case FORWARD_2:
+                    if (!moveDistance(-15)) {
+                        pushDebrisStep = autoStep.STOP;
+                    }
+                    break;
+                case STOP:
+                    pushDebrisIsRunning = false;
+                    break;
+            }
+        } else {
+            pushDebrisStep = autoStep.IDLE;
+            pushDebrisIsRunning = true;
+        }
+        return pushDebrisIsRunning;
     }
 
     //
@@ -594,6 +614,7 @@ public class BetaAuto extends OpMode {
         TURN_2,
         FORWARD_2,
         FORWARD_3,
+        PUSH_DEBRIS,
         FOLLOW_LINE,
         DROP_PERSON,
         CLIMB_MOUNTAIN,
@@ -631,7 +652,7 @@ public class BetaAuto extends OpMode {
         zipServoLeft.setPosition(L_ZIP_CLOSED);
         zipServoRight.setPosition(R_ZIP_CLOSED);
         personDropper.setPosition(PERSON_NOT_DROPPED);
-        blade.setPosition(BLADE_UP);
+        blade.setPosition(BLADE_DOWN);
         startOpModeTime = System.currentTimeMillis();
     }
 
@@ -694,6 +715,60 @@ public class BetaAuto extends OpMode {
 
     // TODO the values in the parentheses still have to be changed as the robot is tested
     // put everything that should have been in the loop method (the switch statement)
+    void beaconFloorZone() {
+        switch (currentStep) {
+            case IDLE:
+                break;
+            case DELAY:
+                if (!delay(delayTime)) {
+                    currentStep = autoStep.FORWARD_1;
+                }
+                break;
+            case FORWARD_1:
+                if (!moveDistance(65)) {
+                    currentStep = autoStep.PUSH_DEBRIS;
+                }
+                break;
+            case PUSH_DEBRIS:
+                if (!pushDebris()) {
+                    blade.setPosition(BLADE_UP);
+                    currentStep = autoStep.FOLLOW_LINE;
+                }
+                break;
+            case FOLLOW_LINE: //follows line to the beacon
+                if (!lineFollower()) {
+                    currentStep = autoStep.DROP_PERSON;
+                }
+                break;
+            case DROP_PERSON:
+                if (!dropPerson()) {
+                    currentStep = autoStep.FORWARD_2;
+                }
+                break;
+            case FORWARD_2:
+                if (!moveDistance(-6)) {
+                    currentStep = autoStep.TURN_2;
+                }
+                break;
+            case TURN_2:
+                if (!gyroTurn(isRed ? 75 : -75)) {
+                    currentStep = autoStep.FORWARD_3;
+                }
+                break;
+            case FORWARD_3:
+                if (!moveDistance(30)) {
+                    currentStep = autoStep.GET_TIME;
+                }
+                break;
+            case GET_TIME:
+                finishedTime = System.currentTimeMillis();
+                currentStep = autoStep.STOP;
+                break;
+            case STOP:
+                telemetry.addData("Total time: ", (finishedTime - startOpModeTime)/1000);
+                break;
+        }
+    }
     void beacon() {
         switch (currentStep) {
             case IDLE:
@@ -716,55 +791,6 @@ public class BetaAuto extends OpMode {
             case DROP_PERSON:
                 if (!dropPerson()) {
                     currentStep = autoStep.CLIMB_MOUNTAIN;
-                }
-                break;
-            case GET_TIME:
-                finishedTime = System.currentTimeMillis();
-                currentStep = autoStep.STOP;
-                break;
-            case STOP:
-                telemetry.addData("Total time: ", (finishedTime - startOpModeTime)/1000);
-                break;
-        }
-    }
-    void beaconFloorZone() {
-        switch (currentStep) {
-            case IDLE:
-                break;
-            case DELAY:
-                if (!delay(delayTime)) {
-                    currentStep = autoStep.FORWARD_1;
-                }
-                break;
-            case FORWARD_1:
-                if (!moveDistance(65)) {
-                    currentStep = autoStep.FOLLOW_LINE;
-                }
-                break;
-            case FOLLOW_LINE: //follows line to the beacon
-                if (!lineFollower()) {
-                    currentStep = autoStep.DROP_PERSON;
-                }
-                break;
-            case DROP_PERSON:
-                if (!dropPerson()) {
-                    currentStep = autoStep.FORWARD_2;
-                }
-                break;
-            case FORWARD_2:
-                if (!moveDistance(-6)) {
-                    currentStep = autoStep.TURN_2;
-                }
-                break;
-            case TURN_2:
-                if (!gyroTurn(isRed ? 80 : -80)) {
-                    currentStep = autoStep.FORWARD_3;
-                }
-                break;
-            case FORWARD_3:
-                if (!moveDistance(18)) {
-                    blade.setPosition(BLADE_DOWN);
-                    currentStep = autoStep.GET_TIME;
                 }
                 break;
             case GET_TIME:

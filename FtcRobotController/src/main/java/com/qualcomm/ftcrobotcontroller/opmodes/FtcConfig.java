@@ -86,7 +86,7 @@ public class FtcConfig {
         // declare defaults here
         param.colorIsRed=false;
         param.delayInSec=0;
-        param.autonType=AutonType.GO_FOR_BEACON;
+        param.autonType=AutonType.BEACON_FLOORZONE;
         param.pushButton=true;
         param.startNearMountain = false;
     }
