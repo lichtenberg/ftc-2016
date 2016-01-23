@@ -71,6 +71,8 @@ public class TeleOp7641 extends OpMode{
 		oldX = false;
         motorLeftPrimary.setDirection(DcMotor.Direction.REVERSE);
         motorLeftSecondary.setDirection(DcMotor.Direction.REVERSE);
+        zipServoRight.setPosition(1.0);
+        zipServoLeft.setPosition(0.0);
 	}
 
     public void init_loop() {
@@ -82,10 +84,10 @@ public class TeleOp7641 extends OpMode{
 
 
         if (gamepad2.x) {
-                blade.setPosition(0.0);
+                blade.setPosition(0.9);
         }
         else {
-            blade.setPosition(0.9);
+            blade.setPosition(0.0);
         }
 
         if (gamepad2.right_trigger > 0){
