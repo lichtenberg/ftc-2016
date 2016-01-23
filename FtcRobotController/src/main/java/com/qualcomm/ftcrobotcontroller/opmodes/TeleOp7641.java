@@ -31,6 +31,7 @@ public class TeleOp7641 extends OpMode{
     Servo zipServoRight;
 	Servo zipServoLeft;
 	Servo personDropperServo;
+    Servo blade;
 
 
     double zipPositionRight;
@@ -63,6 +64,9 @@ public class TeleOp7641 extends OpMode{
         zipServoRight = hardwareMap.servo.get("servo-rzip");
 		zipServoLeft = hardwareMap.servo.get("servo-lzip");
         personDropperServo = hardwareMap.servo.get("servo-person");
+        blade = hardwareMap.servo.get("blade");
+        blade.setPosition(0.9);
+
         oldB = false;
 		oldX = false;
         motorLeftPrimary.setDirection(DcMotor.Direction.REVERSE);
@@ -77,12 +81,25 @@ public class TeleOp7641 extends OpMode{
 	public void loop() {
 
 
+        if (gamepad2.x) {
+                blade.setPosition(0.0);
+        }
+        else {
+            blade.setPosition(0.9);
+        }
+
         if (gamepad2.right_trigger > 0){
-            zipServoRight.setPosition(gamepad2.right_trigger);
+            zipServoRight.setPosition(-gamepad2.right_trigger);
+        }
+        else {
+            zipServoRight.setPosition(1.0);
         }
 
         if (gamepad2.left_trigger > 0){
             zipServoLeft.setPosition(gamepad2.left_trigger);
+        }
+        else {
+            zipServoLeft.setPosition(0.0);
         }
 
         // Person Dropper
