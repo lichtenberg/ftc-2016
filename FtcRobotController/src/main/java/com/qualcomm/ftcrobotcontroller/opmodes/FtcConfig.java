@@ -29,6 +29,8 @@ public class FtcConfig {
         DELAY,
         PUSH_BUTTON,
         AUTON_TYPE,
+        INT_1,
+        INT_2,
         READY;
         private static ConfigStep[] vals = values();
         public ConfigStep next() { return vals[(this.ordinal()+1) % vals.length];}
@@ -41,6 +43,8 @@ public class FtcConfig {
         AutonType autonType;
         boolean startNearMountain;
         boolean pushButton;
+        int int1;
+        int int2;
     }
 
     public enum AutonType {
@@ -89,6 +93,8 @@ public class FtcConfig {
         param.autonType=AutonType.BEACON_FLOORZONE;
         param.pushButton=true;
         param.startNearMountain = false;
+        param.int1 = 11;
+        param.int2 = -13;
     }
 
     public void init_loop(Context context, OpMode opMode) {
@@ -217,6 +223,42 @@ public class FtcConfig {
             }
             if (a1 && !lastA1) {
                 param.autonType = param.autonType.prev();
+            }
+        }
+        currConfigStepCheck = ConfigStep.INT_1;
+        // message to driver about state of this config parameter
+        if (configStepState.ordinal() >= currConfigStepCheck.ordinal()) {
+            opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "Int1: " + param.int1 + " ");
+        }
+        // configure this parameter
+        if (configStepState == currConfigStepCheck) {
+            opMode.telemetry.addData("C" + configStepState.ordinal() + "A", "Push Y for +, A for -");
+            if (y1 && !lastY1) {
+                param.int1++;
+            }
+            if (a1 && !lastA1) {
+                param.int1--;
+                if (param.delayInSec < 0) {
+                    param.delayInSec = 0;
+                }
+            }
+        }
+        currConfigStepCheck = ConfigStep.INT_2;
+        // message to driver about state of this config parameter
+        if (configStepState.ordinal() >= currConfigStepCheck.ordinal()) {
+            opMode.telemetry.addData("C" + currConfigStepCheck.ordinal(), "Int2: " + param.int2 + " ");
+        }
+        // configure this parameter
+        if (configStepState == currConfigStepCheck) {
+            opMode.telemetry.addData("C" + configStepState.ordinal() + "A", "Push Y for +, A for -");
+            if (y1 && !lastY1) {
+                param.int2++;
+            }
+            if (a1 && !lastA1) {
+                param.int2--;
+                if (param.int2 < 0) {
+                    param.int2 = 0;
+                }
             }
         }
 

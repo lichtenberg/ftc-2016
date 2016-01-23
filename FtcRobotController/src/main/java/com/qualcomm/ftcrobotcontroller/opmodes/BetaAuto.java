@@ -38,8 +38,8 @@ public class BetaAuto extends OpMode {
     //
     final static double BUTTON_PRESSED = 0;
     final static double BUTTON_NOTPRESSED = 0.6;
-    final static double L_ZIP_CLOSED = 0.8;
-    final static double R_ZIP_CLOSED = 0.8;
+    final static double L_ZIP_UP = 0.8;
+    final static double R_ZIP_UP = 0.8;
     final static double PERSON_DROPPED = 0;
     final static double PERSON_NOT_DROPPED = 0.8;
     final static double BLADE_DOWN = 0;
@@ -96,6 +96,9 @@ public class BetaAuto extends OpMode {
     double delayTime;
     boolean pushButton;
     FtcConfig.AutonType autonType;
+
+    int int1;
+    int int2;
 
     int targetPosition;
     long startOpModeTime;
@@ -284,17 +287,17 @@ public class BetaAuto extends OpMode {
             int lineSensor = colorSensorL.alpha(); // Get the amount of light detected by the sensor as an int
             //int lineSensor = distanceSensor.getLightDetectedRaw(); // Get the amount of light detected by the sensor as an int
 
-            if (lineSensor >= (blackBaseLine + LINE_ALPHA) && !lineDetected) { // TODO add noise ignoring code
+            if (lineSensor >= (blackBaseLine + LINE_ALPHA) && !lineDetected) {
                 DbgLog.msg("LINE_FOLLOW:  Detected the line");
                 foundLineTime = System.currentTimeMillis();
                 lineDetected = true;
             }
             if (!lineDetected) {
                 // Line not detected yet. Keep going straight.
-                motorFrontLeft.setPower(0.10);
-                motorFrontRight.setPower(0.10);
-                motorBackRight.setPower(0.10);
-                motorBackLeft.setPower(0.10);
+                motorFrontLeft.setPower(0.15);
+                motorFrontRight.setPower(0.15);
+                motorBackRight.setPower(0.15);
+                motorBackLeft.setPower(0.15);
             } else if (lineDetected && (System.currentTimeMillis() - foundLineTime) >= 7000) {
                 // if the line is detected and 10 seconds has passed after the line has found
                 // it goes straight to DROP_PERSON
@@ -424,22 +427,22 @@ public class BetaAuto extends OpMode {
                     pushDebrisStep = autoStep.FOLLOW_LINE;
                     break;
                 case FOLLOW_LINE:
-                    motorFrontLeft.setPower(0.1);
-                    motorFrontRight.setPower(0.1);
-                    motorBackRight.setPower(0.1);
-                    motorBackLeft.setPower(0.1);
+                    motorFrontLeft.setPower(0.15);
+                    motorFrontRight.setPower(0.15);
+                    motorBackRight.setPower(0.15);
+                    motorBackLeft.setPower(0.15);
                     int lineSensor = colorSensorL.alpha(); // Get the amount of light detected by the sensor as an int
-                    if (lineSensor >= (blackBaseLine + LINE_ALPHA)) { // TODO add noise ignoring code
+                    if (lineSensor >= (blackBaseLine + LINE_ALPHA)) {
                         pushDebrisStep = autoStep.FORWARD_1;
                     }
                     break;
                 case FORWARD_1:
-                    if (!moveDistance(12)) {
+                    if (!moveDistance(11)) {
                         pushDebrisStep = autoStep.FORWARD_2;
                     }
                     break;
                 case FORWARD_2:
-                    if (!moveDistance(-15)) {
+                    if (!moveDistance(-13)) {
                         pushDebrisStep = autoStep.STOP;
                     }
                     break;
@@ -479,7 +482,7 @@ public class BetaAuto extends OpMode {
             //double turnSpeed = 0.10;
             //double slowTurnSpeed = 0.04;
 
-            double turnSpeed = 0.10;
+            double turnSpeed = 0.2;
             double slowTurnSpeed = 0.10;
 
             // If we need to turn
@@ -514,7 +517,7 @@ public class BetaAuto extends OpMode {
 
             DbgLog.msg("STARTING TURN: amount " + howMuch + " destHeading " + destHeading);
 
-            shouldTurnLeft = (degreesToTurn > 0);
+            shouldTurnLeft = (howMuch > 0);
             gyroTurnIsRunning = true;
         }
         return gyroTurnIsRunning;
@@ -647,10 +650,13 @@ public class BetaAuto extends OpMode {
         delayTime = ftcConfig.param.delayInSec;
         pushButton = ftcConfig.param.pushButton;
 
+        int1 = ftcConfig.param.int1;
+        int2 = ftcConfig.param.int2;
+
         fingerLeft.setPosition(BUTTON_NOTPRESSED);
         fingerRight.setPosition(BUTTON_NOTPRESSED);
-        zipServoLeft.setPosition(L_ZIP_CLOSED);
-        zipServoRight.setPosition(R_ZIP_CLOSED);
+        zipServoLeft.setPosition(L_ZIP_UP);
+        zipServoRight.setPosition(R_ZIP_UP);
         personDropper.setPosition(PERSON_NOT_DROPPED);
         blade.setPosition(BLADE_DOWN);
         startOpModeTime = System.currentTimeMillis();
@@ -713,7 +719,6 @@ public class BetaAuto extends OpMode {
         telemetry.addData("r-zip pos", zipServoRight.getPosition());
     }
 
-    // TODO the values in the parentheses still have to be changed as the robot is tested
     // put everything that should have been in the loop method (the switch statement)
     void beaconFloorZone() {
         switch (currentStep) {
@@ -746,17 +751,19 @@ public class BetaAuto extends OpMode {
                 }
                 break;
             case FORWARD_2:
-                if (!moveDistance(-6)) {
-                    currentStep = autoStep.TURN_2;
+                if (System.currentTimeMillis() >= (startOpModeTime + 20000)) {
+                    if (!moveDistance(-33)) {
+                        currentStep = autoStep.TURN_2;
+                    }
                 }
                 break;
             case TURN_2:
-                if (!gyroTurn(isRed ? 75 : -75)) {
+                if (!gyroTurn(isRed ? 35 : -35)) {
                     currentStep = autoStep.FORWARD_3;
                 }
                 break;
             case FORWARD_3:
-                if (!moveDistance(30)) {
+                if (!moveDistance(42)) {
                     currentStep = autoStep.GET_TIME;
                 }
                 break;
@@ -862,7 +869,7 @@ public class BetaAuto extends OpMode {
                 }
                 break;
             case FORWARD_2: //continue moving away from beacon
-                if (!moveDistance(18.0, 0.3)) { //TODO move how much?
+                if (!moveDistance(18.0, 0.3)) {
                     currentStep = autoStep.TURN_2;
                 }
                 break;
