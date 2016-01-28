@@ -38,12 +38,13 @@ public class BetaAuto extends OpMode {
     //
     final static double BUTTON_PRESSED = 0;
     final static double BUTTON_NOTPRESSED = 0.6;
-    final static double L_ZIP_UP = 0.8;
-    final static double R_ZIP_UP = 0.8;
+    final static double L_ZIP_UP = 0;
+    final static double R_ZIP_UP = 1;
     final static double PERSON_DROPPED = 0;
     final static double PERSON_NOT_DROPPED = 0.8;
     final static double BLADE_DOWN = 0;
     final static double BLADE_UP = 0.9;
+
 
     //
     // The member variables below are used for when we are executing a turn.
@@ -64,6 +65,7 @@ public class BetaAuto extends OpMode {
     double foundLineTime;
     boolean lineDetected = false;
     boolean lineFollowerIsRunning = false;
+    int howManyTimesDetectedLine = 0;
 
     //
     // The member variables below are used when we are detecting the beacon and pushing the button.
@@ -332,7 +334,6 @@ public class BetaAuto extends OpMode {
                     motorFrontRight.setPower(OTHER_WHEEL_SPEED);
                     motorBackLeft.setPower(LINE_FOLLOW_SPEED);
                     motorBackRight.setPower(OTHER_WHEEL_SPEED);
-
                 }
             }
         } else {
@@ -442,7 +443,7 @@ public class BetaAuto extends OpMode {
                     }
                     break;
                 case FORWARD_2:
-                    if (!moveDistance(-13)) {
+                    if (!moveDistance(-15)) {
                         pushDebrisStep = autoStep.STOP;
                     }
                     break;
@@ -736,7 +737,7 @@ public class BetaAuto extends OpMode {
                 break;
             case PUSH_DEBRIS:
                 if (!pushDebris()) {
-                    blade.setPosition(BLADE_UP);
+                    //blade.setPosition(BLADE_UP);
                     currentStep = autoStep.FOLLOW_LINE;
                 }
                 break;
@@ -747,12 +748,14 @@ public class BetaAuto extends OpMode {
                 break;
             case DROP_PERSON:
                 if (!dropPerson()) {
+                    //blade.setPosition(BLADE_UP);
                     currentStep = autoStep.FORWARD_2;
                 }
                 break;
             case FORWARD_2:
                 if (System.currentTimeMillis() >= (startOpModeTime + 20000)) {
                     if (!moveDistance(-33)) {
+                        //blade.setPosition(BLADE_DOWN);
                         currentStep = autoStep.TURN_2;
                     }
                 }

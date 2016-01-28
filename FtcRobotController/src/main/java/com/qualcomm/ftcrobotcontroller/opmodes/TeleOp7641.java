@@ -91,7 +91,7 @@ public class TeleOp7641 extends OpMode{
         }
 
         if (gamepad2.right_trigger > 0){
-            zipServoRight.setPosition(-gamepad2.right_trigger);
+            zipServoRight.setPosition(1.0 - gamepad2.right_trigger);
         }
         else {
             zipServoRight.setPosition(1.0);
