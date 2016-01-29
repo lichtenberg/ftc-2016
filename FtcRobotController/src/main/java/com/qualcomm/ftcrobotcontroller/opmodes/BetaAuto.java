@@ -428,10 +428,10 @@ public class BetaAuto extends OpMode {
                     pushDebrisStep = autoStep.FOLLOW_LINE;
                     break;
                 case FOLLOW_LINE:
-                    motorFrontLeft.setPower(0.15);
-                    motorFrontRight.setPower(0.15);
-                    motorBackRight.setPower(0.15);
-                    motorBackLeft.setPower(0.15);
+                    motorFrontLeft.setPower(0.2);
+                    motorFrontRight.setPower(0.2);
+                    motorBackRight.setPower(0.2);
+                    motorBackLeft.setPower(0.2);
                     int lineSensor = colorSensorL.alpha(); // Get the amount of light detected by the sensor as an int
                     if (lineSensor >= (blackBaseLine + LINE_ALPHA)) {
                         pushDebrisStep = autoStep.FORWARD_1;
@@ -737,7 +737,7 @@ public class BetaAuto extends OpMode {
                 break;
             case PUSH_DEBRIS:
                 if (!pushDebris()) {
-                    //blade.setPosition(BLADE_UP);
+                    blade.setPosition(BLADE_UP);
                     currentStep = autoStep.FOLLOW_LINE;
                 }
                 break;
@@ -753,15 +753,17 @@ public class BetaAuto extends OpMode {
                 }
                 break;
             case FORWARD_2:
-                if (System.currentTimeMillis() >= (startOpModeTime + 20000)) {
+                if (System.currentTimeMillis() >= (startOpModeTime + 10000)) {
+                    // protect against the 10-second line crossing rule
+                    blade.setPosition(BLADE_UP);
                     if (!moveDistance(-33)) {
-                        //blade.setPosition(BLADE_DOWN);
+                        blade.setPosition(BLADE_DOWN);
                         currentStep = autoStep.TURN_2;
                     }
                 }
                 break;
             case TURN_2:
-                if (!gyroTurn(isRed ? 35 : -35)) {
+                if (!gyroTurn(isRed ? 30 : -30)) {
                     currentStep = autoStep.FORWARD_3;
                 }
                 break;
