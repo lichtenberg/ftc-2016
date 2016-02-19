@@ -28,6 +28,9 @@ public class TeleOp7641 extends OpMode{
 	DcMotor motorRightSecondary;
 	DcMotor motorLeftPrimary;
 	DcMotor motorLeftSecondary;
+    DcMotor motorSpool;
+    DcMotor motorTape;
+    DcMotor motorAiming;
     Servo zipServoRight;
 	Servo zipServoLeft;
 	Servo personDropperServo;
@@ -58,9 +61,11 @@ public class TeleOp7641 extends OpMode{
 		 */
 		motorRightPrimary = hardwareMap.dcMotor.get("motor-fr");
 		motorLeftPrimary = hardwareMap.dcMotor.get("motor-fl");
-
 		motorRightSecondary = hardwareMap.dcMotor.get("motor-br");
 		motorLeftSecondary = hardwareMap.dcMotor.get("motor-bl");
+        motorSpool = hardwareMap.dcMotor.get("motor-spool");
+        motorTape = hardwareMap.dcMotor.get("motor-tape");
+        motorAiming = hardwareMap.dcMotor.get("motor-aiming");
         zipServoRight = hardwareMap.servo.get("servo-rzip");
 		zipServoLeft = hardwareMap.servo.get("servo-lzip");
         personDropperServo = hardwareMap.servo.get("servo-person");
@@ -111,7 +116,21 @@ public class TeleOp7641 extends OpMode{
         else {
             personDropperServo.setPosition(0.8);
         }
-
+        // Tape Extension
+        if (gamepad2.dpad_up){
+            motorSpool.setPower(-1.0);
+        }
+        else {
+            motorSpool.setPower(0);
+        }
+        if (gamepad2.dpad_down){
+            motorSpool.setPower(1.0);
+        }
+        else {
+            motorSpool.setPower(0);
+        }
+        motorAiming.setPower(-gamepad2.left_stick_y);
+        motorTape.setPower(-gamepad2.right_stick_y);
 
         // tank drive
         float left = -gamepad1.left_stick_y;
