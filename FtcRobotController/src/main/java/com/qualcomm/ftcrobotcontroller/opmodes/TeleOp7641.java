@@ -118,18 +118,18 @@ public class TeleOp7641 extends OpMode{
         }
         // Tape Extension
         if (gamepad2.dpad_up){
-            motorSpool.setPower(-1.0);
+            motorSpool.setPower(-0.5);
         }
         else {
             motorSpool.setPower(0);
         }
         if (gamepad2.dpad_down){
-            motorSpool.setPower(1.0);
+            motorSpool.setPower(0.5);
         }
         else {
             motorSpool.setPower(0);
         }
-        motorAiming.setPower(-gamepad2.left_stick_y);
+        motorAiming.setPower(-gamepad2.left_stick_y/2);
         motorTape.setPower(-gamepad2.right_stick_y);
 
         // tank drive
