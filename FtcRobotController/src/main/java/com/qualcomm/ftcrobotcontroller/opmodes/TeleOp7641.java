@@ -87,12 +87,16 @@ public class TeleOp7641 extends OpMode{
 	@Override
 	public void loop() {
 
-
-        if (gamepad2.x) {
-                blade.setPosition(0.9);
+        //
+        if (gamepad2.x && !oldX) {
+                blade.setPosition(0.0);
+                oldX = true;
         }
         else {
-            blade.setPosition(0.0);
+            if (gamepad2.x && oldX) {
+                blade.setPosition(0.9);
+                oldX = false;
+            }
         }
 
         if (gamepad2.right_trigger > 0){
@@ -117,20 +121,20 @@ public class TeleOp7641 extends OpMode{
             personDropperServo.setPosition(0.8);
         }
         // Tape Extension
-        if (gamepad2.dpad_up){
+        if (gamepad2.dpad_down){
             motorSpool.setPower(-0.5);
         }
         else {
             motorSpool.setPower(0);
         }
-        if (gamepad2.dpad_down){
+        if (gamepad2.dpad_up){
             motorSpool.setPower(0.5);
         }
         else {
             motorSpool.setPower(0);
         }
-        motorAiming.setPower(-gamepad2.left_stick_y/2);
-        motorTape.setPower(-gamepad2.right_stick_y);
+        motorAiming.setPower(gamepad2.left_stick_y/2);
+        motorTape.setPower(-gamepad2.right_stick_y/4);
 
         // tank drive
         float left = -gamepad1.left_stick_y;
