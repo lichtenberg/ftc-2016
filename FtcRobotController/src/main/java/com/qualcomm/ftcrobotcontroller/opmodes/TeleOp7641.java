@@ -87,16 +87,14 @@ public class TeleOp7641 extends OpMode{
 	@Override
 	public void loop() {
 
-        //
+        // Toggle Barrier
         if (gamepad2.x && !oldX) {
                 blade.setPosition(0.0);
                 oldX = true;
         }
-        else {
-            if (gamepad2.x && oldX) {
+        if (gamepad2.x && oldX) {
                 blade.setPosition(0.9);
                 oldX = false;
-            }
         }
 
         if (gamepad2.right_trigger > 0){
@@ -120,19 +118,17 @@ public class TeleOp7641 extends OpMode{
         else {
             personDropperServo.setPosition(0.8);
         }
-        // Tape Extension
+        // Spool Extension
         if (gamepad2.dpad_down){
-            motorSpool.setPower(-0.5);
-        }
-        else {
-            motorSpool.setPower(0);
-        }
-        if (gamepad2.dpad_up){
             motorSpool.setPower(0.5);
         }
-        else {
-            motorSpool.setPower(0);
+        if (gamepad2.dpad_up) {
+            motorSpool.setPower(-0.5);
         }
+        if (!gamepad2.dpad_up && !gamepad2.dpad_down){
+            motorSpool.setPower(0.0);
+        }
+
         motorAiming.setPower(gamepad2.left_stick_y/2);
         motorTape.setPower(-gamepad2.right_stick_y/4);
 
@@ -162,6 +158,12 @@ public class TeleOp7641 extends OpMode{
             motorRightSecondary.setPower(1.0);
             motorLeftPrimary.setPower(1.0);
             motorLeftSecondary.setPower(1.0);
+        }
+        if (gamepad1.x){
+            motorRightPrimary.setPower(-1.0);
+            motorRightSecondary.setPower(-1.0);
+            motorLeftPrimary.setPower(-1.0);
+            motorLeftSecondary.setPower(-1.0);
         }
 
         if (gamepad1.b){
