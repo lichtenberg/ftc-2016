@@ -9,7 +9,7 @@ package com.qualcomm.ftcrobotcontroller.opmodes;
 // to reduce clutter and simplify hardwareMap config
 // only uses what is actually needed
 // Copy and paste the commented template
-public class BetaTest extends OpMode {
+public class BetaTest extends BetaAuto {
 
     public void init() {
 
@@ -36,8 +36,10 @@ public class BetaTest extends BetaAuto {
     public void loop() {
         //isRed = true;
 
+        telemetry.addData("NOTE", "*** this is only a TEST program ***");
         showTelemetry();
         test();
+        setPushButtonPosition();
     }
 
     void test() {
