@@ -36,7 +36,7 @@ public class BetaTest extends BetaAuto {
     public void loop() {
         //isRed = true;
 
-        telemetry.addData("NOTE", "*** this is only a TEST program ***");
+        telemetry.addData("A0. NOTE", "*** this is only a TEST program ***");
         showTelemetry();
         test();
         setPushButtonPosition();

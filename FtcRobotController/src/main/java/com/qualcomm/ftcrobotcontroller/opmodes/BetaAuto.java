@@ -38,6 +38,7 @@ public class BetaAuto extends OpMode {
     //
     final static double BUTTON_PRESSED = 0;
     final static double BUTTON_NOTPRESSED = 0.6;
+    final static double L_BUTTON_NOTPRESSED = 0.6;
     final static double L_ZIP_UP = 0;
     final static double R_ZIP_UP = 1;
     final static double PERSON_DROPPED = 0;
@@ -65,7 +66,6 @@ public class BetaAuto extends OpMode {
     double foundLineTime;
     boolean lineDetected = false;
     boolean lineFollowerIsRunning = false;
-    int howManyTimesDetectedLine = 0;
 
     //
     // The member variables below are used when we are detecting the beacon and pushing the button.
@@ -305,7 +305,7 @@ public class BetaAuto extends OpMode {
                 motorBackRight.setPower(0.15);
                 motorBackLeft.setPower(0.15);
             } else if (lineDetected && (System.currentTimeMillis() - foundLineTime) >= 7000) {
-                // if the line is detected and 10 seconds has passed after the line has found
+                // if the line is detected and 7 seconds has passed after the line has found
                 // it goes straight to DROP_PERSON
                 motorFrontLeft.setPower(0);
                 motorFrontRight.setPower(0);
@@ -714,17 +714,17 @@ public class BetaAuto extends OpMode {
     }
 
     public void showTelemetry() {
-        telemetry.addData("TIME ELAPSED", (System.currentTimeMillis() - startOpModeTime) / 1000 + "\n");
-        telemetry.addData("TIME LEFT", 30 - ((System.currentTimeMillis() - startOpModeTime) / 1000) - 1 + "\n");
+        telemetry.addData("A1. TIME ELAPSED", (System.currentTimeMillis() - startOpModeTime) / 1000 + "\n");
+        telemetry.addData("A2. TIME LEFT", 30 - ((System.currentTimeMillis() - startOpModeTime) / 1000) - 1 + "\n");
 
-        telemetry.addData("A1. currentStep", currentStep);
-        telemetry.addData("A2. autonType", autonType);
-        telemetry.addData("A3. team", (isRed ? "red" : "blue") + "\n");
+        telemetry.addData("A3. currentStep", currentStep);
+        telemetry.addData("A4. autonType", autonType);
+        telemetry.addData("A5. team", (isRed ? "red" : "blue") + "\n");
 
         telemetry.addData("B1. push the left button? ", ifPushLeftButton());
-        telemetry.addData("B2. color sensor", "b: " + colorSensorB.blue() + "; r: " + colorSensorB.red() + "; a: " + colorSensorB.alpha() + "\n");
+        telemetry.addData("B2. colorSensorB", "b: " + colorSensorB.blue() + "; r: " + colorSensorB.red() + "; a: " + colorSensorB.alpha() + "\n");
 
-        telemetry.addData("B3. detected the line? ", colorSensorL.alpha() + " " + lineDetected);
+        telemetry.addData("B3. detected the line? ", "colorSensorL " + colorSensorL.alpha() + " " + lineDetected + " blackBaseLine " + blackBaseLine);
         telemetry.addData("B4. turn left? ", (colorSensorL.alpha() >= (blackBaseLine + LINE_ALPHA)) + "\n");
 
         telemetry.addData("C1. enc", motorFrontLeft.getCurrentPosition() + " " + motorFrontRight.getCurrentPosition());
