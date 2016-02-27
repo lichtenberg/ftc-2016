@@ -173,6 +173,10 @@ public class BetaAuto extends OpMode {
          */
         gyro = hardwareMap.i2cDevice.get("gyro-1");
         gyroReader = new ModernGyroReader(gyro);
+
+        // init servo positions
+        fingerLeft.setPosition(BUTTON_NOTPRESSED);
+        fingerRight.setPosition(BUTTON_NOTPRESSED);
     }
 
     //
@@ -367,6 +371,14 @@ public class BetaAuto extends OpMode {
     }
 
     public boolean ifPushLeftButton() {
+        // no more latency issues from detection to return
+        beaconLeftIsBlue = (colorSensorB.blue() > 1);
+        return !(beaconLeftIsBlue ^ !isRed);
+    }
+    public boolean ifPushLeftButton(Object useLegacyPlaceholder) {
+        // legacy code, to use pass this into the method:
+        // ifPushLeftButton(new Object());
+
         // this method has two sections
         // how it works is, if it detects a blue it will check blue for 50 times
         // and measure how many times it detected red. Kind of the "purity" of the signal
@@ -703,21 +715,27 @@ public class BetaAuto extends OpMode {
 
     public void showTelemetry() {
         telemetry.addData("TIME ELAPSED", (System.currentTimeMillis() - startOpModeTime) / 1000 + "\n");
-        telemetry.addData("TIME LEFT", 30 - ((System.currentTimeMillis() - startOpModeTime) / 1000) + "\n");
-        telemetry.addData("currentStep", currentStep);
-        telemetry.addData("autonType", autonType);
-        telemetry.addData("team", (isRed ? "red" : "blue") + "\n");
-        telemetry.addData("push the left button? ", ifPushLeftButton());
-        telemetry.addData("detected the line? ", colorSensorL.alpha() + " " + lineDetected);
-        telemetry.addData("turn left? ", (colorSensorL.alpha() >= (blackBaseLine + LINE_ALPHA)) + "\n");
-        telemetry.addData("enc", motorFrontLeft.getCurrentPosition() + " " + motorFrontRight.getCurrentPosition());
-        telemetry.addData("target pos", targetPosition);
-        telemetry.addData("gyro", " cur " + gyroReader.curHeading + " dest " + destHeading + " degsToTurn " + degreesToTurn + "\n");
-        telemetry.addData("l-finger pos", fingerLeft.getPosition());
-        telemetry.addData("r-finger pos", fingerRight.getPosition());
-        telemetry.addData("personDropper pos", personDropper.getPosition());
-        telemetry.addData("l-zip pos", zipServoLeft.getPosition());
-        telemetry.addData("r-zip pos", zipServoRight.getPosition());
+        telemetry.addData("TIME LEFT", 30 - ((System.currentTimeMillis() - startOpModeTime) / 1000) - 1 + "\n");
+
+        telemetry.addData("A1. currentStep", currentStep);
+        telemetry.addData("A2. autonType", autonType);
+        telemetry.addData("A3. team", (isRed ? "red" : "blue") + "\n");
+
+        telemetry.addData("B1. push the left button? ", ifPushLeftButton());
+        telemetry.addData("B2. color sensor", "b: " + colorSensorB.blue() + "; r: " + colorSensorB.red() + "; a: " + colorSensorB.alpha() + "\n");
+
+        telemetry.addData("B3. detected the line? ", colorSensorL.alpha() + " " + lineDetected);
+        telemetry.addData("B4. turn left? ", (colorSensorL.alpha() >= (blackBaseLine + LINE_ALPHA)) + "\n");
+
+        telemetry.addData("C1. enc", motorFrontLeft.getCurrentPosition() + " " + motorFrontRight.getCurrentPosition());
+        telemetry.addData("C2. target pos", targetPosition);
+        telemetry.addData("C3. gyro", " cur " + gyroReader.curHeading + " dest " + destHeading + " degsToTurn " + degreesToTurn + "\n");
+
+        telemetry.addData("D1. l-finger pos", fingerLeft.getPosition());
+        telemetry.addData("D2. r-finger pos", fingerRight.getPosition());
+        telemetry.addData("D5. personDropper pos", personDropper.getPosition());
+        telemetry.addData("D3. l-zip pos", zipServoLeft.getPosition());
+        telemetry.addData("D4. r-zip pos", zipServoRight.getPosition());
     }
 
     // put everything that should have been in the loop method (the switch statement)
