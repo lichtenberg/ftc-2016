@@ -71,6 +71,7 @@ public class TeleOp7641 extends OpMode{
         personDropperServo = hardwareMap.servo.get("servo-person");
         blade = hardwareMap.servo.get("blade");
         blade.setPosition(0.9);
+        personDropperServo.setPosition(0.8);
 
         oldB = false;
 		oldX = false;
@@ -120,10 +121,10 @@ public class TeleOp7641 extends OpMode{
         }
         // Spool Extension
         if (gamepad2.dpad_down){
-            motorSpool.setPower(0.5);
+            motorSpool.setPower(1.0);
         }
         if (gamepad2.dpad_up) {
-            motorSpool.setPower(-0.5);
+            motorSpool.setPower(-1.0);
         }
         if (!gamepad2.dpad_up && !gamepad2.dpad_down){
             motorSpool.setPower(0.0);
