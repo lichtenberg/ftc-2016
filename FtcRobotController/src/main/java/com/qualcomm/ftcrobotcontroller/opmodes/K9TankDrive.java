@@ -111,9 +111,9 @@ public class K9TankDrive extends OpMode {
 		 *    "servo_1" controls the arm joint of the manipulator.
 		 *    "servo_6" controls the claw joint of the manipulator.
 		 */
-		motorRight = hardwareMap.dcMotor.get("moto2");
-		motorLeft = hardwareMap.dcMotor.get("moto1");
-		motorRight.setDirection(DcMotor.Direction.REVERSE);
+		motorRight = hardwareMap.dcMotor.get("motor_2");
+		motorLeft = hardwareMap.dcMotor.get("motor_1");
+		motorLeft.setDirection(DcMotor.Direction.REVERSE);
 
 		arm = hardwareMap.servo.get("servo_1");
 		claw = hardwareMap.servo.get("servo_6");
