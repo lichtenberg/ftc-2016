@@ -31,20 +31,22 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.GyroSensor;
-//import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.util.Range;
 
-@TeleOp(name="HolomicPlayground", group="MentorBot")
+@TeleOp(name="BogieTankDrive", group="MentorBot")
 /**
  * TeleOp Mode
  * <p>
  * Enables control of the robot via the gamepad
  */
-public class HolomicPlayground extends OpMode {
+public class BogieTankDrive extends OpMode {
 
 
 	DcMotor motorFrontRight;
@@ -53,12 +55,10 @@ public class HolomicPlayground extends OpMode {
 	DcMotor motorRearLeft;
 
 	GyroSensor gyroSensor;
-	//DistanceSensor ultrasonicSensor;
-
 	/**
 	 * Constructor
 	 */
-	public HolomicPlayground() {
+	public BogieTankDrive() {
 
 	}
 
@@ -75,14 +75,22 @@ public class HolomicPlayground extends OpMode {
 		 * configured your robot and created the configuration file.
 		 */
 
-
-		motorFrontRight = hardwareMap.dcMotor.get("fr");
-		motorFrontLeft = hardwareMap.dcMotor.get("fl");
-		motorRearRight = hardwareMap.dcMotor.get("rr");
-		motorRearLeft = hardwareMap.dcMotor.get("rl");
+		/*
+		 * For the demo Tetrix K9 bot we assume the following,
+		 *   There are two motors "motor_1" and "motor_2"
+		 *   "motor_1" is on the right side of the bot.
+		 *   "motor_2" is on the left side of the bot.
+		 *
+		 * We also assume that there are two servos "servo_1" and "servo_6"
+		 *    "servo_1" controls the arm joint of the manipulator.
+		 *    "servo_6" controls the claw joint of the manipulator.
+		 */
+		motorFrontRight = hardwareMap.dcMotor.get("front-right");
+		motorFrontLeft = hardwareMap.dcMotor.get("front-left");
+		motorRearRight = hardwareMap.dcMotor.get("rear-right");
+		motorRearLeft = hardwareMap.dcMotor.get("rear-left");
 
 		gyroSensor = hardwareMap.gyroSensor.get("gyro");
-
 
 		motorFrontRight.setDirection(DcMotor.Direction.REVERSE);
 		motorRearRight.setDirection(DcMotor.Direction.REVERSE);
@@ -100,83 +108,52 @@ public class HolomicPlayground extends OpMode {
 	@Override
 	public void loop() {
 
-
-		double ff = 1.0/1.414;
-		double wheelPowerA = 0.0;
-		double wheelPowerB = 0.0;
-
-		double yaxis = -gamepad1.left_stick_y;
-		double xaxis = gamepad1.left_stick_x;
-
-		double leftRotate = gamepad1.left_trigger;
-		double rightRotate = gamepad1.right_trigger;
-
-
-		if ((Math.abs(leftRotate) > 0.01) || (Math.abs(rightRotate) > 0.01)) {
-			if (leftRotate > 0.01) {
-				motorFrontRight.setPower(leftRotate);
-				motorRearLeft.setPower(-leftRotate);
-
-				motorFrontLeft.setPower(-leftRotate);
-				motorRearRight.setPower(leftRotate);
-
-			} else if (rightRotate > 0.01) {
-				motorFrontRight.setPower(-rightRotate);
-				motorRearLeft.setPower(rightRotate);
-
-				motorFrontLeft.setPower(rightRotate);
-				motorRearRight.setPower(-rightRotate);
-
-			}
-
-		} else {
-
-
-			xaxis = Range.clip(xaxis, -1, 1);
-			yaxis = Range.clip(yaxis, -1, 1);
-
-			// scale the joystick value to make it easier to control
-			// the robot more precisely at slower speeds.
-			xaxis = (float) scaleInput(xaxis);
-			yaxis = (float) scaleInput(yaxis);
-
-			// The wheels are at 45 degrees to the body of the robot.  When travelling straight,
-			// the X and Y speeds will be proportional to 1/sqrt(2), which is both sin(45) and cos(45)
-
-			double wheelB = (yaxis - xaxis) / ff;
-			double wheelA = (yaxis + xaxis) / ff;
-
-			double magnitude = Math.sqrt((xaxis * xaxis) + (yaxis * yaxis));
-
-			wheelA = wheelA * magnitude;
-			wheelB = wheelB * magnitude;
-
-			wheelPowerA = Range.clip(wheelA, -1, 1);
-			wheelPowerB = Range.clip(wheelB, -1, 1);
-
-
-			// write the values to the motors.   Note that for conventional forward motion we can set the
-			// diagonal wheels to the same power.
-			motorFrontRight.setPower(wheelPowerA);
-			motorRearLeft.setPower(wheelPowerA);
-
-			motorFrontLeft.setPower(wheelPowerB);
-			motorRearRight.setPower(wheelPowerB);
-
-		}
+		/*
+		 * Gamepad 1
+		 *
+		 * Gamepad 1 controls the motors via the left stick, and it controls the
+		 * wrist/claw via the a,b, x, y buttons
+		 */
 
 
 
+        // tank drive
+        // note that if y equal -1 then joystick is pushed all of the way forward.
+        float left = -gamepad1.left_stick_y;
+        float right = -gamepad1.right_stick_y;
 
+		// clip the right/left values so that the values never exceed +/- 1
+		right = Range.clip(right, -1, 1);
+		left = Range.clip(left, -1, 1);
+
+		// scale the joystick value to make it easier to control
+		// the robot more precisely at slower speeds.
+		right = (float)scaleInput(right);
+		left =  (float)scaleInput(left);
+
+		// write the values to the motors
+		motorFrontRight.setPower(right);
+		motorFrontLeft.setPower(left);
+		motorRearRight.setPower(right);
+		motorRearLeft.setPower(left);
+
+
+
+		/*
+		 * Send telemetry data back to driver station. Note that if we are using
+		 * a legacy NXT-compatible motor controller, then the getPower() method
+		 * will return a null value. The legacy NXT-compatible motor controllers
+		 * are currently write only.
+		 */
 
 		//telemetry.addData("Text", "*** Robot Data***");
 		telemetry.addData("Time",String.format("%f",this.time));
-		telemetry.addData("Wheel",String.format("%f %f",wheelPowerA,wheelPowerB));
 		telemetry.addData("Left",String.format("%d/%d",motorFrontLeft.getCurrentPosition(),motorRearLeft.getCurrentPosition()));
-		telemetry.addData("Right", String.format("%d/%d",motorFrontRight.getCurrentPosition(), motorRearRight.getCurrentPosition()));
-		telemetry.addData("Gyro", String.format("%d", gyroSensor.getHeading()));
-		//telemetry.addData("Range", String.format("%f", ultrasonicSensor.getUltrasonicLevel()));
+		telemetry.addData("Right",String.format("%d/%d",motorFrontRight.getCurrentPosition(),motorRearRight.getCurrentPosition()));
+		telemetry.addData("Gyro",String.format("%d",gyroSensor.getHeading()));
 
+		//telemetry.addData("arm", "arm:  " + String.format("%.2f", armPosition));
+        //telemetry.addData("claw", "claw:  " + String.format("%.2f", clawPosition));
 
 	}
 
