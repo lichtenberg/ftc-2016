@@ -34,9 +34,14 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotor.RunMode;
 import com.qualcomm.robotcore.hardware.GyroSensor;
-//import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.robotcore.hardware.I2cAddr;
+import com.qualcomm.robotcore.hardware.I2cDevice;
+import com.qualcomm.robotcore.hardware.I2cDeviceSynch;
+import com.qualcomm.robotcore.hardware.I2cDeviceSynchImpl;
+
 
 @TeleOp(name="HolomicPlayground", group="MentorBot")
 /**
@@ -53,7 +58,18 @@ public class HolomicPlayground extends OpMode {
 	DcMotor motorRearLeft;
 
 	GyroSensor gyroSensor;
-	//DistanceSensor ultrasonicSensor;
+
+	byte[] range1Cache; //The read will return an array of bytes. They are stored in this variable
+	int odsSensorValue;
+	int ultrasonicSensorValue;
+
+	I2cAddr RANGE1ADDRESS = new I2cAddr(0x14); //Default I2C address for MR Range (7-bit)
+	public static final int RANGE1_REG_START = 0x04; //Register to start reading
+	public static final int RANGE1_READ_LENGTH = 2; //Number of byte to read
+
+	public I2cDevice RANGE1;
+	public I2cDeviceSynch RANGE1Reader;
+
 
 	/**
 	 * Constructor
@@ -87,7 +103,23 @@ public class HolomicPlayground extends OpMode {
 		motorFrontRight.setDirection(DcMotor.Direction.REVERSE);
 		motorRearRight.setDirection(DcMotor.Direction.REVERSE);
 
+		RANGE1 = hardwareMap.i2cDevice.get("range");
+		RANGE1Reader = new I2cDeviceSynchImpl(RANGE1, RANGE1ADDRESS, false);
+		RANGE1Reader.engage();
 
+		gyroSensor.calibrate();
+
+		// Try using the PID modes to control the motors.
+
+		motorFrontLeft.setMode(RunMode.RUN_USING_ENCODER);
+		motorFrontRight.setMode(RunMode.RUN_USING_ENCODER);
+		motorRearLeft.setMode(RunMode.RUN_USING_ENCODER);
+		motorRearRight.setMode(RunMode.RUN_USING_ENCODER);
+
+		motorFrontLeft.setMaxSpeed(606);
+		motorFrontRight.setMaxSpeed(606);
+		motorRearLeft.setMaxSpeed(606);
+		motorRearRight.setMaxSpeed(606);
 
 
 	}
@@ -101,7 +133,7 @@ public class HolomicPlayground extends OpMode {
 	public void loop() {
 
 
-		double ff = 1.0/1.414;
+		double ff = 1.0/Math.sqrt(2.0);
 		double wheelPowerA = 0.0;
 		double wheelPowerB = 0.0;
 
@@ -111,7 +143,15 @@ public class HolomicPlayground extends OpMode {
 		double leftRotate = gamepad1.left_trigger;
 		double rightRotate = gamepad1.right_trigger;
 
+		range1Cache = RANGE1Reader.read(RANGE1_REG_START, RANGE1_READ_LENGTH);
 
+		odsSensorValue = (int) range1Cache[1];
+		if (range1Cache[0] != -1) {
+			ultrasonicSensorValue = (int) range1Cache[0];
+		}
+
+
+		// The right joystick is for rotating in place.
 		if ((Math.abs(leftRotate) > 0.01) || (Math.abs(rightRotate) > 0.01)) {
 			if (leftRotate > 0.01) {
 				motorFrontRight.setPower(leftRotate);
@@ -143,8 +183,8 @@ public class HolomicPlayground extends OpMode {
 			// The wheels are at 45 degrees to the body of the robot.  When travelling straight,
 			// the X and Y speeds will be proportional to 1/sqrt(2), which is both sin(45) and cos(45)
 
-			double wheelB = (yaxis - xaxis) / ff;
-			double wheelA = (yaxis + xaxis) / ff;
+			double wheelB = (yaxis + xaxis) / ff;
+			double wheelA = (yaxis - xaxis) / ff;
 
 			double magnitude = Math.sqrt((xaxis * xaxis) + (yaxis * yaxis));
 
@@ -171,11 +211,12 @@ public class HolomicPlayground extends OpMode {
 
 		//telemetry.addData("Text", "*** Robot Data***");
 		telemetry.addData("Time",String.format("%f",this.time));
-		telemetry.addData("Wheel",String.format("%f %f",wheelPowerA,wheelPowerB));
-		telemetry.addData("Left",String.format("%d/%d",motorFrontLeft.getCurrentPosition(),motorRearLeft.getCurrentPosition()));
-		telemetry.addData("Right", String.format("%d/%d",motorFrontRight.getCurrentPosition(), motorRearRight.getCurrentPosition()));
+		telemetry.addData("Wheel",String.format("%f %f", wheelPowerA, wheelPowerB));
+		telemetry.addData("Left", String.format("%d/%d", motorFrontLeft.getCurrentPosition(),motorRearLeft.getCurrentPosition()));
+		telemetry.addData("Right", String.format("%d/%d", motorFrontRight.getCurrentPosition(), motorRearRight.getCurrentPosition()));
 		telemetry.addData("Gyro", String.format("%d", gyroSensor.getHeading()));
-		//telemetry.addData("Range", String.format("%f", ultrasonicSensor.getUltrasonicLevel()));
+		telemetry.addData("Ultra Sonic", ultrasonicSensorValue);
+		telemetry.addData("ODS", odsSensorValue);
 
 
 	}
