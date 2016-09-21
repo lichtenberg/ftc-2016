@@ -31,9 +31,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
 package org.firstinspires.ftc.teamcode;
 
+
+import com.qualcomm.ftccommon.DbgLog;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.DcMotor.RunMode;
 import com.qualcomm.robotcore.hardware.GyroSensor;
 import com.qualcomm.robotcore.util.Range;
@@ -43,13 +47,57 @@ import com.qualcomm.robotcore.hardware.I2cDeviceSynch;
 import com.qualcomm.robotcore.hardware.I2cDeviceSynchImpl;
 
 
-@TeleOp(name="HolomicPlayground", group="MentorBot")
 /**
  * TeleOp Mode
  * <p>
  * Enables control of the robot via the gamepad
  */
-public class HolomicPlayground extends OpMode {
+
+enum ButtonEvent {
+		BTN_NONE,
+		BTN_A_PRESSED,
+		BTN_B_PRESSED,
+		BTN_X_PRESSED,
+		BTN_Y_PRESSED
+		};
+
+class GamepadButtonEventMonitor {
+
+	boolean prevA,prevB,prevX,prevY;
+	ButtonEvent event = ButtonEvent.BTN_NONE;
+
+	public GamepadButtonEventMonitor()
+	{
+
+	}
+
+	public void updateState(Gamepad g)
+	{
+		if (g.a && !prevA) {
+			event = ButtonEvent.BTN_A_PRESSED;
+		} else if (g.b && !prevB) {
+			event = ButtonEvent.BTN_B_PRESSED;
+		} else if (g.x && !prevX) {
+			event = ButtonEvent.BTN_X_PRESSED;
+		} else if (g.y && !prevY) {
+			event = ButtonEvent.BTN_Y_PRESSED;
+		}
+		prevA = g.a;
+		prevB = g.b;
+		prevX = g.x;
+		prevY = g.y;
+	}
+
+	public ButtonEvent getButtonEvent()
+	{
+		ButtonEvent ret = event;
+		event = ButtonEvent.BTN_NONE;
+		return ret;
+	}
+}
+
+@TeleOp(name="HolomicPlayground", group="MentorBot")
+public class HolomicPlayground extends LinearOpMode {
 
 
 	DcMotor motorFrontRight;
@@ -70,12 +118,16 @@ public class HolomicPlayground extends OpMode {
 	public I2cDevice RANGE1;
 	public I2cDeviceSynch RANGE1Reader;
 
+	public final boolean usePIDMode = false;
+
+	GamepadButtonEventMonitor gbA;
+
 
 	/**
 	 * Constructor
 	 */
 	public HolomicPlayground() {
-
+		gbA = new GamepadButtonEventMonitor();
 	}
 
 	/*
@@ -83,8 +135,8 @@ public class HolomicPlayground extends OpMode {
 	 *
 	 * @see com.qualcomm.robotcore.eventloop.opmode.OpMode#start()
 	 */
-	@Override
-	public void init() {
+	//@Override
+	public void initRobot() {
 		/*
 		 * Use the hardwareMap to get the dc motors and servos by name. Note
 		 * that the names of the devices must match the names used when you
@@ -99,6 +151,20 @@ public class HolomicPlayground extends OpMode {
 
 		gyroSensor = hardwareMap.gyroSensor.get("gyro");
 
+		// Try using the PID modes to control the motors.
+
+		if (usePIDMode) {
+			motorFrontLeft.setMode(RunMode.RUN_USING_ENCODER);
+			motorFrontRight.setMode(RunMode.RUN_USING_ENCODER);
+			motorRearLeft.setMode(RunMode.RUN_USING_ENCODER);
+			motorRearRight.setMode(RunMode.RUN_USING_ENCODER);
+
+			motorFrontLeft.setMaxSpeed(606);
+			motorFrontRight.setMaxSpeed(606);
+			motorRearLeft.setMaxSpeed(606);
+			motorRearRight.setMaxSpeed(606);
+		}
+
 
 		motorFrontRight.setDirection(DcMotor.Direction.REVERSE);
 		motorRearRight.setDirection(DcMotor.Direction.REVERSE);
@@ -109,114 +175,149 @@ public class HolomicPlayground extends OpMode {
 
 		gyroSensor.calibrate();
 
-		// Try using the PID modes to control the motors.
-
-		motorFrontLeft.setMode(RunMode.RUN_USING_ENCODER);
-		motorFrontRight.setMode(RunMode.RUN_USING_ENCODER);
-		motorRearLeft.setMode(RunMode.RUN_USING_ENCODER);
-		motorRearRight.setMode(RunMode.RUN_USING_ENCODER);
-
-		motorFrontLeft.setMaxSpeed(606);
-		motorFrontRight.setMaxSpeed(606);
-		motorRearLeft.setMaxSpeed(606);
-		motorRearRight.setMaxSpeed(606);
 
 
 	}
 
+	public double normalizeAngle(double angle)
+	{
+		while (angle > 360.0) {
+			angle = angle - 360.0;
+		}
+		while (angle < -360.0) {
+			angle = angle + 360.0;
+		}
+
+		if (angle >= 180.0) {
+			return angle - 360.0;
+		}
+
+		return angle;
+
+	}
 	/*
 	 * This method will be called repeatedly in a loop
 	 *
 	 * @see com.qualcomm.robotcore.eventloop.opmode.OpMode#run()
 	 */
 	@Override
-	public void loop() {
+	public void runOpMode() throws InterruptedException {
+
+		boolean holdHeading = false;
 
 
-		double ff = 1.0/Math.sqrt(2.0);
-		double wheelPowerA = 0.0;
-		double wheelPowerB = 0.0;
+		initRobot();
 
-		double yaxis = -gamepad1.left_stick_y;
-		double xaxis = gamepad1.left_stick_x;
+		waitForStart();
 
-		double leftRotate = gamepad1.left_trigger;
-		double rightRotate = gamepad1.right_trigger;
+		while (opModeIsActive()) {
 
-		range1Cache = RANGE1Reader.read(RANGE1_REG_START, RANGE1_READ_LENGTH);
+			double wheelPowerA = 0.0;
+			double wheelPowerB = 0.0;
+			double wheelA = 0.0;
+			double wheelB = 0.0;
 
-		odsSensorValue = (int) range1Cache[1];
-		if (range1Cache[0] != -1) {
-			ultrasonicSensorValue = (int) range1Cache[0];
-		}
+			double omniWheelAngle = 45.0;
+			double direction = 0.0;
+			double heading = gyroSensor.getHeading();
 
+			gbA.updateState(gamepad1);
 
-		// The right joystick is for rotating in place.
-		if ((Math.abs(leftRotate) > 0.01) || (Math.abs(rightRotate) > 0.01)) {
-			if (leftRotate > 0.01) {
-				motorFrontRight.setPower(leftRotate);
-				motorRearLeft.setPower(-leftRotate);
+			double yaxis = -gamepad1.left_stick_y;
+			double xaxis = gamepad1.left_stick_x;
 
-				motorFrontLeft.setPower(-leftRotate);
-				motorRearRight.setPower(leftRotate);
+			double leftRotate = gamepad1.left_trigger;
+			double rightRotate = gamepad1.right_trigger;
 
-			} else if (rightRotate > 0.01) {
-				motorFrontRight.setPower(-rightRotate);
-				motorRearLeft.setPower(rightRotate);
+			range1Cache = RANGE1Reader.read(RANGE1_REG_START, RANGE1_READ_LENGTH);
 
-				motorFrontLeft.setPower(rightRotate);
-				motorRearRight.setPower(-rightRotate);
-
+			odsSensorValue = (int) range1Cache[1];
+			if (range1Cache[0] != -1) {
+				ultrasonicSensorValue = (int) range1Cache[0];
 			}
 
-		} else {
+			switch (gbA.getButtonEvent()) {
+				case BTN_A_PRESSED:
+					holdHeading = !holdHeading;
+					break;
+				default:
+					break;
+			}
+
+			// The right joystick is for rotating in place.
+			if ((Math.abs(leftRotate) > 0.01) || (Math.abs(rightRotate) > 0.01)) {
+				if (leftRotate > 0.01) {
+					motorFrontRight.setPower(leftRotate);
+					motorRearLeft.setPower(-leftRotate);
+
+					motorFrontLeft.setPower(-leftRotate);
+					motorRearRight.setPower(leftRotate);
+
+				} else if (rightRotate > 0.01) {
+					motorFrontRight.setPower(-rightRotate);
+					motorRearLeft.setPower(rightRotate);
+
+					motorFrontLeft.setPower(rightRotate);
+					motorRearRight.setPower(-rightRotate);
+
+				}
+
+			} else {
 
 
-			xaxis = Range.clip(xaxis, -1, 1);
-			yaxis = Range.clip(yaxis, -1, 1);
+				xaxis = Range.clip(xaxis, -1, 1);
+				yaxis = Range.clip(yaxis, -1, 1);
 
-			// scale the joystick value to make it easier to control
-			// the robot more precisely at slower speeds.
-			xaxis = (float) scaleInput(xaxis);
-			yaxis = (float) scaleInput(yaxis);
+				// Compute our desired heading given the Y and X joystick values.
+				// We could work in radians, but degrees looks better on telemetry.
+				direction = Math.toDegrees(Math.atan2(yaxis, xaxis));
 
-			// The wheels are at 45 degrees to the body of the robot.  When travelling straight,
-			// the X and Y speeds will be proportional to 1/sqrt(2), which is both sin(45) and cos(45)
+				// Add in the offset that our omniwheels are mounted at (45 degrees) and
+				// normalize to +/- 180 degrees.
+				direction = normalizeAngle(direction - omniWheelAngle);
+				if (holdHeading) {
+					direction = normalizeAngle(direction - heading);
+				}
 
-			double wheelB = (yaxis + xaxis) / ff;
-			double wheelA = (yaxis - xaxis) / ff;
-
-			double magnitude = Math.sqrt((xaxis * xaxis) + (yaxis * yaxis));
-
-			wheelA = wheelA * magnitude;
-			wheelB = wheelB * magnitude;
-
-			wheelPowerA = Range.clip(wheelA, -1, 1);
-			wheelPowerB = Range.clip(wheelB, -1, 1);
+				// Compute wheel amounts.
+				wheelB = Math.cos(Math.toRadians(direction));
+				wheelA = Math.sin(Math.toRadians(direction));
 
 
-			// write the values to the motors.   Note that for conventional forward motion we can set the
-			// diagonal wheels to the same power.
-			motorFrontRight.setPower(wheelPowerA);
-			motorRearLeft.setPower(wheelPowerA);
 
-			motorFrontLeft.setPower(wheelPowerB);
-			motorRearRight.setPower(wheelPowerB);
+				double magnitude = Math.sqrt((xaxis * xaxis) + (yaxis * yaxis));
 
+				wheelA = wheelA * magnitude;
+				wheelB = wheelB * magnitude;
+
+				wheelPowerA = Range.clip(wheelA, -1, 1);
+				wheelPowerB = Range.clip(wheelB, -1, 1);
+
+
+				// write the values to the motors.   Note that for conventional forward motion we can set the
+				// diagonal wheels to the same power.
+				motorFrontRight.setPower(wheelPowerA);
+				motorRearLeft.setPower(wheelPowerA);
+
+				motorFrontLeft.setPower(wheelPowerB);
+				motorRearRight.setPower(wheelPowerB);
+			}
+
+
+			//telemetry.addData("Text", "*** Robot Data***");
+			telemetry.addData("Time", String.format("%f", this.time));
+			telemetry.addData("WheelPower", String.format("%f %f", wheelPowerA, wheelPowerB));
+			telemetry.addData("Wheel", String.format("%f %f", wheelA, wheelB));
+			telemetry.addData("Left", String.format("%d/%d", motorFrontLeft.getCurrentPosition(), motorRearLeft.getCurrentPosition()));
+			telemetry.addData("Right", String.format("%d/%d", motorFrontRight.getCurrentPosition(), motorRearRight.getCurrentPosition()));
+			telemetry.addData("Gyro", String.format("%d  %f", gyroSensor.getHeading(), direction));
+			telemetry.addData("Ultra Sonic", ultrasonicSensorValue);
+			telemetry.addData("ODS", odsSensorValue);
+			telemetry.addData("HoldHeading",holdHeading);
+			telemetry.update();
+
+			idle();
 		}
-
-
-
-
-
-		//telemetry.addData("Text", "*** Robot Data***");
-		telemetry.addData("Time",String.format("%f",this.time));
-		telemetry.addData("Wheel",String.format("%f %f", wheelPowerA, wheelPowerB));
-		telemetry.addData("Left", String.format("%d/%d", motorFrontLeft.getCurrentPosition(),motorRearLeft.getCurrentPosition()));
-		telemetry.addData("Right", String.format("%d/%d", motorFrontRight.getCurrentPosition(), motorRearRight.getCurrentPosition()));
-		telemetry.addData("Gyro", String.format("%d", gyroSensor.getHeading()));
-		telemetry.addData("Ultra Sonic", ultrasonicSensorValue);
-		telemetry.addData("ODS", odsSensorValue);
 
 
 	}
@@ -226,10 +327,10 @@ public class HolomicPlayground extends OpMode {
 	 *
 	 * @see com.qualcomm.robotcore.eventloop.opmode.OpMode#stop()
 	 */
-	@Override
-	public void stop() {
+	//@Override
+	//public void stop() {
 
-	}
+//	}
 
 	/*
 	 * This method scales the joystick input so for low joystick values, the
