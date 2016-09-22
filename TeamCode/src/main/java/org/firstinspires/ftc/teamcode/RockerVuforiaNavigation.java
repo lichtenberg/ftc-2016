@@ -97,6 +97,10 @@ public class RockerVuforiaNavigation extends LinearOpMode {
      */
     VuforiaLocalizer vuforia;
 
+    static float inchToMm(float inch) {
+        return inch * 25.4f;
+    }
+
     @Override public void runOpMode() throws InterruptedException {
         /**
          * Start up Vuforia, telling it the id of the view that we wish to use as the parent for
@@ -123,23 +127,26 @@ public class RockerVuforiaNavigation extends LinearOpMode {
          */
         VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters(R.id.cameraMonitorViewId);
         parameters.vuforiaLicenseKey = "AZWG+cn/////AAAAGYEgpOlzNkoymtetiK3PMy4xr8jY4pwcOjhMPrOpYGwpGFELATFZMpfQfyXhW+ivVNWZwViqsNVaP1q5yxWPvLU4CMC9YIsy0vSaGXdOaYevJGSnBKzYak6905qom/KJl8deDx0ndV4tvv5tLEWcm0wV7YjuXM3maPaLEFM/wwNt28NEB4LcYyNPRQ4yneKo7HWIc7kMu6hg6ij9h7gem2Hwj3FBHvb4dosZyTLCqzCz00S4IqzRVTadbX8xulwsp1AsrejOFbLSfpBPkyIgGoBwaAFJY12owovW35Zjl2h5zWgcl71YQhkjVPUeEFaF3EHiMl3qYl8piDuYKRwDIuVYUNbs5+/yjdltaAAl/zCU";
-        parameters.cameraDirection = VuforiaLocalizer.CameraDirection.FRONT;
+        parameters.cameraDirection = VuforiaLocalizer.CameraDirection.BACK;
         this.vuforia = ClassFactory.createVuforiaLocalizer(parameters);
 
         /**
-         * Load the data sets that for the trackable objects we wish to track. These particular data
-         * sets are stored in the 'assets' part of our application (you'll see them in the Android
-         * Studio 'Project' view over there on the left of the screen). You can make your own datasets
-         * with the Vuforia Target Manager: https://developer.vuforia.com/target-manager. PDFs for the
-         * example "StonesAndChips", datasets can be found in in this project in the
-         * documentation directory.
+         * Load the data sets that for the trackable objects we wish to track.
          */
         VuforiaTrackables ftcAssets = this.vuforia.loadTrackablesFromAsset("FTC_2016-17");
-        VuforiaTrackable redTarget = ftcAssets.get(0);
-        redTarget.setName("RedTarget");  // Wheels
 
-        VuforiaTrackable blueTarget  = ftcAssets.get(1);
-        blueTarget.setName("BlueTarget");  // Tools
+        VuforiaTrackable wheelsTarget = ftcAssets.get(0);
+        wheelsTarget.setName("Wheels");  // Wheels
+
+        VuforiaTrackable toolsTarget  = ftcAssets.get(1);
+        toolsTarget.setName("Tools");  // Tools
+
+        VuforiaTrackable legosTarget = ftcAssets.get(2);
+        legosTarget.setName("Legos");  // Legos
+
+        VuforiaTrackable gearsTarget  = ftcAssets.get(3);
+        gearsTarget.setName("Gears");  // Gears
+
 
         /** For convenience, gather together all the trackable objects in one easily-iterable collection */
         List<VuforiaTrackable> allTrackables = new ArrayList<VuforiaTrackable>();
@@ -147,10 +154,7 @@ public class RockerVuforiaNavigation extends LinearOpMode {
 
         /**
          * We use units of mm here because that's the recommended units of measurement for the
-         * size values specified in the XML for the ImageTarget trackables in data sets. E.g.:
-         *      <ImageTarget name="stones" size="247 173"/>
-         * You don't *have to* use mm here, but the units here and the units used in the XML
-         * target configuration files *must* correspond for the math to work out correctly.
+         * size values specified in the XML for the ImageTarget trackables in data sets.
          */
         float mmPerInch        = 25.4f;
         float mmBotWidth       = 18 * mmPerInch;            // ... or whatever is right for your robot
@@ -212,32 +216,61 @@ public class RockerVuforiaNavigation extends LinearOpMode {
          * - Then we rotate it  90 around the field's Z access to face it away from the audience.
          * - Finally, we translate it back along the X axis towards the red audience wall.
          */
-        OpenGLMatrix redTargetLocationOnField = OpenGLMatrix
+
+        /* The targets closest to the driver stations are 60" from the corner.
+           The targets closest to the audience are 96" from the corner.
+         */
+        OpenGLMatrix gearsTargetLocationOnField = OpenGLMatrix
                 /* Then we translate the target off to the RED WALL. Our translation here
                 is a negative translation in X.*/
-                .translation(-mmFTCFieldWidth/2, 0, 0)
+                .translation(-inchToMm(60.0f), 0, 0)
                 .multiplied(Orientation.getRotationMatrix(
                         /* First, in the fixed (field) coordinate system, we rotate 90deg in X, then 90 in Z */
                         AxesReference.EXTRINSIC, AxesOrder.XZX,
                         AngleUnit.DEGREES, 90, 90, 0));
-        redTarget.setLocation(redTargetLocationOnField);
-        RobotLog.ii(TAG, "Red Target=%s", format(redTargetLocationOnField));
+        OpenGLMatrix toolsTargetLocationOnField = OpenGLMatrix
+                /* Then we translate the target off to the RED WALL. Our translation here
+                is a negative translation in X.*/
+                .translation(-inchToMm(96.0f), 0, 0)
+                .multiplied(Orientation.getRotationMatrix(
+                        /* First, in the fixed (field) coordinate system, we rotate 90deg in X, then 90 in Z */
+                        AxesReference.EXTRINSIC, AxesOrder.XZX,
+                        AngleUnit.DEGREES, 90, 90, 0));
+
+        gearsTarget.setLocation(gearsTargetLocationOnField);
+        RobotLog.ii(TAG, "Gears Target=%s", format(gearsTargetLocationOnField));
+
+        toolsTarget.setLocation(toolsTargetLocationOnField);
+        RobotLog.ii(TAG, "Tools Target=%s", format(toolsTargetLocationOnField));
 
        /*
         * To place the Stones Target on the Blue Audience wall:
         * - First we rotate it 90 around the field's X axis to flip it upright
         * - Finally, we translate it along the Y axis towards the blue audience wall.
         */
-        OpenGLMatrix blueTargetLocationOnField = OpenGLMatrix
+        OpenGLMatrix wheelsTargetLocationOnField = OpenGLMatrix
                 /* Then we translate the target off to the Blue Audience wall.
                 Our translation here is a positive translation in Y.*/
-                .translation(0, mmFTCFieldWidth/2, 0)
+                .translation(0, inchToMm(60.0f), 0)
                 .multiplied(Orientation.getRotationMatrix(
                         /* First, in the fixed (field) coordinate system, we rotate 90deg in X */
                         AxesReference.EXTRINSIC, AxesOrder.XZX,
                         AngleUnit.DEGREES, 90, 0, 0));
-        blueTarget.setLocation(blueTargetLocationOnField);
-        RobotLog.ii(TAG, "Blue Target=%s", format(blueTargetLocationOnField));
+
+        OpenGLMatrix legosTargetLocationOnField = OpenGLMatrix
+                /* Then we translate the target off to the Blue Audience wall.
+                Our translation here is a positive translation in Y.*/
+                .translation(0, inchToMm(96.0f), 0)
+                .multiplied(Orientation.getRotationMatrix(
+                        /* First, in the fixed (field) coordinate system, we rotate 90deg in X */
+                        AxesReference.EXTRINSIC, AxesOrder.XZX,
+                        AngleUnit.DEGREES, 90, 0, 0));
+
+        wheelsTarget.setLocation(wheelsTargetLocationOnField);
+        RobotLog.ii(TAG, "Wheels Target=%s", format(wheelsTargetLocationOnField));
+
+        legosTarget.setLocation(legosTargetLocationOnField);
+        RobotLog.ii(TAG, "Legos Target=%s", format(legosTargetLocationOnField));
 
         /**
          * Create a transformation matrix describing where the phone is on the robot. Here, we
@@ -252,10 +285,10 @@ public class RockerVuforiaNavigation extends LinearOpMode {
          * plane) is then CCW, as one would normally expect from the usual classic 2D geometry.
          */
         OpenGLMatrix phoneLocationOnRobot = OpenGLMatrix
-                .translation(mmBotWidth/2,0,0)
+                .translation(0, mmBotWidth/2,0)
                 .multiplied(Orientation.getRotationMatrix(
                         AxesReference.EXTRINSIC, AxesOrder.YZY,
-                        AngleUnit.DEGREES, -90, 0, 0));
+                        AngleUnit.DEGREES, 0, 0, 0));
         RobotLog.ii(TAG, "phone=%s", format(phoneLocationOnRobot));
 
         /**
@@ -263,8 +296,11 @@ public class RockerVuforiaNavigation extends LinearOpMode {
          * listener is a {@link VuforiaTrackableDefaultListener} and can so safely cast because
          * we have not ourselves installed a listener of a different type.
          */
-        ((VuforiaTrackableDefaultListener)redTarget.getListener()).setPhoneInformation(phoneLocationOnRobot, parameters.cameraDirection);
-        ((VuforiaTrackableDefaultListener)blueTarget.getListener()).setPhoneInformation(phoneLocationOnRobot, parameters.cameraDirection);
+        ((VuforiaTrackableDefaultListener)gearsTarget.getListener()).setPhoneInformation(phoneLocationOnRobot, parameters.cameraDirection);
+        ((VuforiaTrackableDefaultListener)toolsTarget.getListener()).setPhoneInformation(phoneLocationOnRobot, parameters.cameraDirection);
+
+        ((VuforiaTrackableDefaultListener)wheelsTarget.getListener()).setPhoneInformation(phoneLocationOnRobot, parameters.cameraDirection);
+        ((VuforiaTrackableDefaultListener)legosTarget.getListener()).setPhoneInformation(phoneLocationOnRobot, parameters.cameraDirection);
 
         /**
          * A brief tutorial: here's how all the math is going to work:
