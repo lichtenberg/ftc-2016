@@ -205,9 +205,9 @@ public class HolomicPlayground extends LinearOpMode {
 
 	GamepadButtonEventMonitor gbA;
 
-	double pidP = 1.0;
+	double pidP = 1.1;
 	double pidI = 0.0;
-	double pidD = 0.0;
+	double pidD = 0.3;
 
 
 	/**
