@@ -362,6 +362,16 @@ public class HolomicPlayground extends LinearOpMode {
 			double wheelA = 0.0;
 			double wheelB = 0.0;
 
+			double wheelRL = 0.0;
+			double wheelRR = 0.0;
+			double wheelFL = 0.0;
+			double wheelFR = 0.0;
+
+			double rotateRL = 0.0;
+			double rotateRR = 0.0;
+			double rotateFL = 0.0;
+			double rotateFR = 0.0;
+
 			double omniWheelAngle = 45.0;
 			double direction = 0.0;
 			double heading = gyroSensor.getHeading();
@@ -411,72 +421,93 @@ public class HolomicPlayground extends LinearOpMode {
 			}
 
 			// The right joystick is for rotating in place.
-			if ((Math.abs(leftRotate) > 0.01) || (Math.abs(rightRotate) > 0.01)) {
-				wheelPowerA = leftRotate;
-				wheelPowerB = rightRotate;
 
-				if (leftRotate > 0.01) {
-					motorFrontRight.setPower(leftRotate);
-					motorRearLeft.setPower(-leftRotate);
-
-					motorFrontLeft.setPower(-leftRotate);
-					motorRearRight.setPower(leftRotate);
-
-				} else if (rightRotate > 0.01) {
-					motorFrontRight.setPower(-rightRotate);
-					motorRearLeft.setPower(rightRotate);
-
-					motorFrontLeft.setPower(rightRotate);
-					motorRearRight.setPower(-rightRotate);
-
-				}
-
-			} else {
+			rotateFR = 0.0;
+			rotateFL = 0.0;
+			rotateRL = 0.0;
+			rotateRR = 0.0;
 
 
-				xaxis = Range.clip(xaxis, -1, 1);
-				yaxis = Range.clip(yaxis, -1, 1);
+			if (leftRotate > 0.01) {
+				rotateFR = leftRotate;
+				rotateRL = -leftRotate;
+				rotateFL = -leftRotate;
+				rotateRR = leftRotate;
 
-				// Compute our desired heading given the Y and X joystick values.
-				// We could work in radians, but degrees looks better on telemetry.
-				direction = Math.toDegrees(Math.atan2(yaxis, xaxis));
+			} else if (rightRotate > 0.01) {
+				rotateFR = -rightRotate;
+				rotateRL = rightRotate;
+				rotateFL = rightRotate;
+				rotateRR = -rightRotate;
 
-				// Add in the offset that our omniwheels are mounted at (45 degrees) and
-				// normalize to +/- 180 degrees.
-				direction = normalizeAngle(direction - omniWheelAngle);
-				if (holdHeading) {
-					direction = normalizeAngle(direction - heading);
-				}
-
-				// Compute wheel amounts.
-				wheelB = Math.cos(Math.toRadians(direction));
-				wheelA = Math.sin(Math.toRadians(direction));
-
-
-
-				double magnitude = Math.sqrt((xaxis * xaxis) + (yaxis * yaxis));
-
-				wheelA = wheelA * magnitude;
-				wheelB = wheelB * magnitude;
-
-				wheelPowerA = Range.clip(wheelA, -1, 1);
-				wheelPowerB = Range.clip(wheelB, -1, 1);
-
-
-				// write the values to the motors.   Note that for conventional forward motion we can set the
-				// diagonal wheels to the same power.
-				motorFrontRight.setPower(wheelPowerA);
-				motorRearLeft.setPower(wheelPowerA);
-
-				motorFrontLeft.setPower(wheelPowerB);
-				motorRearRight.setPower(wheelPowerB);
 			}
+
+
+
+			xaxis = Range.clip(xaxis, -1, 1);
+			yaxis = Range.clip(yaxis, -1, 1);
+
+			// Compute our desired heading given the Y and X joystick values.
+			// We could work in radians, but degrees looks better on telemetry.
+			direction = Math.toDegrees(Math.atan2(yaxis, xaxis));
+
+			// Add in the offset that our omniwheels are mounted at (45 degrees) and
+			// normalize to +/- 180 degrees.
+			direction = normalizeAngle(direction - omniWheelAngle);
+			if (holdHeading) {
+				direction = normalizeAngle(direction - heading);
+			}
+
+			// Compute wheel amounts.  We only need two for normal driving,
+			// since we do the same thing to opposite wheels.
+			wheelB = Math.cos(Math.toRadians(direction));
+			wheelA = Math.sin(Math.toRadians(direction));
+
+			double magnitude = Math.sqrt((xaxis * xaxis) + (yaxis * yaxis));
+
+			wheelA = wheelA * magnitude;
+			wheelB = wheelB * magnitude;
+
+
+			// Combine everything together for all four wheels.
+
+			wheelFR = wheelA + rotateFR;
+			wheelRL = wheelA + rotateRL;
+			wheelFL = wheelB + rotateFL;
+			wheelRR = wheelB + rotateRR;
+
+			// OK, we don't want to pass more than 1.0 into the motor controllers, otherwise
+			// the proportions will all be incorrect.   Compute the max value
+			// for all our motor controllers and if more than 1.0, scale everything.
+
+			double maxFront = Math.max(Math.abs(wheelFR), Math.abs(wheelFL));
+			double maxRear = Math.max(Math.abs(wheelRL), Math.abs(wheelRR));
+			double maxAll = Math.max(maxFront,maxRear);
+
+			if (maxAll > 1.0) {
+				double scaleFactor = 1.0/maxAll;
+
+				wheelFR *= scaleFactor;
+				wheelFL *= scaleFactor;
+				wheelRL *= scaleFactor;
+				wheelRR *= scaleFactor;
+
+			}
+
+
+
+			// write the values to the motors.   Note that for conventional forward motion we can set the
+			// diagonal wheels to the same power.
+			motorFrontRight.setPower(wheelFR);
+			motorRearLeft.setPower(wheelRL);
+
+			motorFrontLeft.setPower(wheelFL);
+			motorRearRight.setPower(wheelRR);
 
 
 			//telemetry.addData("Text", "*** Robot Data***");
 			telemetry.addData("Time", String.format("%f", this.time));
-			telemetry.addData("WheelPower", String.format("%f %f", wheelPowerA, wheelPowerB));
-			telemetry.addData("Wheel", String.format("%f %f", wheelA, wheelB));
+			telemetry.addData("Wheel", String.format("%f %f %f %f", wheelFL, wheelFR, wheelRL, wheelRR));
 			telemetry.addData("Left", String.format("%d/%d", motorFrontLeft.getCurrentPosition(), motorRearLeft.getCurrentPosition()));
 			telemetry.addData("Right", String.format("%d/%d", motorFrontRight.getCurrentPosition(), motorRearRight.getCurrentPosition()));
 			telemetry.addData("Gyro", String.format("%d  %f", gyroSensor.getHeading(), direction));
