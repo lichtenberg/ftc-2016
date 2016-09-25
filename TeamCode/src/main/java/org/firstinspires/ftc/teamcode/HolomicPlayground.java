@@ -45,6 +45,7 @@ import com.qualcomm.robotcore.hardware.I2cAddr;
 import com.qualcomm.robotcore.hardware.I2cDevice;
 import com.qualcomm.robotcore.hardware.I2cDeviceSynch;
 import com.qualcomm.robotcore.hardware.I2cDeviceSynchImpl;
+import org.firstinspires.ftc.teamcode.PIDController;
 
 
 /**
@@ -58,12 +59,20 @@ enum ButtonEvent {
 		BTN_A_PRESSED,
 		BTN_B_PRESSED,
 		BTN_X_PRESSED,
-		BTN_Y_PRESSED
+		BTN_Y_PRESSED,
+		BTN_DPUP_PRESSED,
+		BTN_DPDN_PRESSED,
+		BTN_DPLEFT_PRESSED,
+		BTN_DPRIGHT_PRESSED,
+		BTN_BLEFT_PRESSED,
+		BTN_BRIGHT_PRESSED
 		};
 
 class GamepadButtonEventMonitor {
 
 	boolean prevA,prevB,prevX,prevY;
+	boolean prevDPUP,prevDPDN,prevDPLEFT,prevDPRIGHT;
+	boolean prevBLEFT,prevBRIGHT;
 	ButtonEvent event = ButtonEvent.BTN_NONE;
 
 	public GamepadButtonEventMonitor()
@@ -81,11 +90,30 @@ class GamepadButtonEventMonitor {
 			event = ButtonEvent.BTN_X_PRESSED;
 		} else if (g.y && !prevY) {
 			event = ButtonEvent.BTN_Y_PRESSED;
+		} else if (g.dpad_up && !prevDPUP) {
+			event = ButtonEvent.BTN_DPUP_PRESSED;
+		} else if (g.dpad_down && !prevDPDN) {
+			event = ButtonEvent.BTN_DPDN_PRESSED;
+		} else if (g.dpad_left && !prevDPLEFT) {
+			event = ButtonEvent.BTN_DPLEFT_PRESSED;
+		} else if (g.dpad_right && !prevDPRIGHT) {
+			event = ButtonEvent.BTN_DPRIGHT_PRESSED;
+		}else if (g.left_bumper && !prevBLEFT) {
+			event = ButtonEvent.BTN_BLEFT_PRESSED;
+		} else if (g.right_bumper && !prevBRIGHT) {
+			event = ButtonEvent.BTN_BRIGHT_PRESSED;
 		}
 		prevA = g.a;
 		prevB = g.b;
 		prevX = g.x;
 		prevY = g.y;
+		prevDPUP = g.dpad_up;
+		prevDPDN = g.dpad_down;
+		prevDPLEFT = g.dpad_left;
+		prevDPRIGHT = g.dpad_right;
+		prevBLEFT = g.left_bumper;
+		prevBRIGHT = g.right_bumper;
+
 	}
 
 	public ButtonEvent getButtonEvent()
@@ -93,6 +121,61 @@ class GamepadButtonEventMonitor {
 		ButtonEvent ret = event;
 		event = ButtonEvent.BTN_NONE;
 		return ret;
+	}
+}
+
+class GyroWatcher {
+
+	GyroSensor gyro;
+	double nullHeading;
+	double targetHeading;
+
+	GyroWatcher(GyroSensor g)
+	{
+		gyro = g;
+	}
+
+	private double normalizeAngle(double angle)
+	{
+		while (angle > 360.0) {
+			angle = angle - 360.0;
+		}
+		while (angle < -360.0) {
+			angle = angle + 360.0;
+		}
+
+		if (angle >= 180.0) {
+			return angle - 360.0;
+		}
+
+		return angle;
+
+	}
+
+	public void gyroZero()
+	{
+		nullHeading = gyro.getHeading();
+	}
+
+	public void setTargetHeading(double heading)
+	{
+		targetHeading = heading;
+	}
+
+	public double relativeHeading()
+	{
+		return normalizeAngle(gyro.getHeading() - nullHeading);
+	}
+
+	public double angleTo(double heading)
+	{
+		return normalizeAngle(heading - relativeHeading());
+	}
+
+	public double targetError()
+	{
+		// Return an "error value" from 0 to 1 representing how far off we are.
+		return (normalizeAngle(targetHeading - relativeHeading())) / 180.0;
 	}
 }
 
@@ -122,6 +205,10 @@ public class HolomicPlayground extends LinearOpMode {
 
 	GamepadButtonEventMonitor gbA;
 
+	double pidP = 1.0;
+	double pidI = 0.0;
+	double pidD = 0.0;
+
 
 	/**
 	 * Constructor
@@ -136,7 +223,7 @@ public class HolomicPlayground extends LinearOpMode {
 	 * @see com.qualcomm.robotcore.eventloop.opmode.OpMode#start()
 	 */
 	//@Override
-	public void initRobot() {
+	public void initRobot()  throws InterruptedException {
 		/*
 		 * Use the hardwareMap to get the dc motors and servos by name. Note
 		 * that the names of the devices must match the names used when you
@@ -174,7 +261,9 @@ public class HolomicPlayground extends LinearOpMode {
 		RANGE1Reader.engage();
 
 		gyroSensor.calibrate();
-
+		while (gyroSensor.isCalibrating()) {
+			Thread.sleep(100);
+		}
 
 
 	}
@@ -193,6 +282,62 @@ public class HolomicPlayground extends LinearOpMode {
 		}
 
 		return angle;
+
+	}
+
+	// On carpet, 1 full rotation takes about 2 seconds.  That's 180 degrees/sec.
+
+	private void setAllMotors(double val)
+	{
+		val = Range.clip(val, -1.0, 1.0);
+
+		val = -val;
+
+		if (val != 0) {
+			if ((val > 0) && (val < 0.04)) val = 0.04;
+			if ((val < 0) && (val > -0.04)) val = -0.04;
+		}
+
+
+		// Rotates clockwise with positive 'val' or counter-clockwise with negative 'val'
+		motorFrontRight.setPower(-val);
+		motorRearLeft.setPower(val);
+		motorFrontLeft.setPower(val);
+		motorRearRight.setPower(-val);
+	}
+
+	public void gyroTurn(double ndeg) throws InterruptedException
+	{
+		GyroWatcher gw = new GyroWatcher(gyroSensor);
+		PIDController pid = new PIDController(0, 0, 0);
+		double timeDelta = 0.1;
+		double currentTime = 0;
+
+		pid.pidSetParams(pidP, pidI, pidD);
+		pid.windupGuard = 1.0;
+
+		gw.gyroZero();
+		gw.setTargetHeading(ndeg);
+
+		while (currentTime < 5.0) {
+			double error = gw.targetError();
+
+			if (Math.abs(gw.angleTo(ndeg)) <= 1) {
+				// break;
+			}
+
+			double control = pid.pidUpdate(error, 1.0);
+
+			setAllMotors(control);	// XXX don't we need to scale this somehow?
+
+			Thread.sleep((int) (timeDelta * 1000));
+
+			DbgLog.msg("PID Loop:  Time=%f error=%f control=%f\n", currentTime, gw.angleTo(ndeg), control);
+
+			currentTime += timeDelta;
+		}
+
+		setAllMotors(0);
 
 	}
 	/*
@@ -240,12 +385,36 @@ public class HolomicPlayground extends LinearOpMode {
 				case BTN_A_PRESSED:
 					holdHeading = !holdHeading;
 					break;
+				case BTN_B_PRESSED:
+					gyroTurn(90.0);
+					break;
+				case BTN_DPUP_PRESSED:
+					pidP = pidP + 0.1;
+					break;
+				case BTN_DPDN_PRESSED:
+					pidP = pidP - 0.1;
+					break;
+				case BTN_DPLEFT_PRESSED:
+					pidI = pidI - 0.1;
+					break;
+				case BTN_DPRIGHT_PRESSED:
+					pidI = pidI + 0.1;
+					break;
+				case BTN_BLEFT_PRESSED:
+					pidD = pidD - 0.1;
+					break;
+				case BTN_BRIGHT_PRESSED:
+					pidD = pidD + 0.1;
+					break;
 				default:
 					break;
 			}
 
 			// The right joystick is for rotating in place.
 			if ((Math.abs(leftRotate) > 0.01) || (Math.abs(rightRotate) > 0.01)) {
+				wheelPowerA = leftRotate;
+				wheelPowerB = rightRotate;
+
 				if (leftRotate > 0.01) {
 					motorFrontRight.setPower(leftRotate);
 					motorRearLeft.setPower(-leftRotate);
@@ -314,6 +483,7 @@ public class HolomicPlayground extends LinearOpMode {
 			telemetry.addData("Ultra Sonic", ultrasonicSensorValue);
 			telemetry.addData("ODS", odsSensorValue);
 			telemetry.addData("HoldHeading",holdHeading);
+			telemetry.addData("PID","P=%f  I=%f  D=%f", pidP, pidI, pidD);
 			telemetry.update();
 
 			idle();
@@ -332,38 +502,5 @@ public class HolomicPlayground extends LinearOpMode {
 
 //	}
 
-	/*
-	 * This method scales the joystick input so for low joystick values, the
-	 * scaled value is less than linear.  This is to make it easier to drive
-	 * the robot more precisely at slower speeds.
-	 */
-	double scaleInput(double dVal)  {
-		double[] scaleArray = { 0.0, 0.05, 0.09, 0.10, 0.12, 0.15, 0.18, 0.24,
-				0.30, 0.36, 0.43, 0.50, 0.60, 0.72, 0.85, 1.00, 1.00 };
-
-		// get the corresponding index for the scaleInput array.
-		int index = (int) (dVal * 16.0);
-
-		// index should be positive.
-		if (index < 0) {
-			index = -index;
-		}
-
-		// index cannot exceed size of array minus 1.
-		if (index > 16) {
-			index = 16;
-		}
-
-		// get value from the array.
-		double dScale = 0.0;
-		if (dVal < 0) {
-			dScale = -scaleArray[index];
-		} else {
-			dScale = scaleArray[index];
-		}
-
-		// return scaled value.
-		return dScale;
-	}
 
 }
