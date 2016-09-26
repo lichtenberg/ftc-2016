@@ -289,13 +289,15 @@ public class HolomicPlayground extends LinearOpMode {
 
 	private void setAllMotors(double val)
 	{
+		double deadBand = 0.06;
+
 		val = Range.clip(val, -1.0, 1.0);
 
 		val = -val;
 
 		if (val != 0) {
-			if ((val > 0) && (val < 0.04)) val = 0.04;
-			if ((val < 0) && (val > -0.04)) val = -0.04;
+			if ((val > 0) && (val < deadBand)) val = deadBand;
+			if ((val < 0) && (val > -deadBand)) val = -deadBand;
 		}
 
 
@@ -308,11 +310,12 @@ public class HolomicPlayground extends LinearOpMode {
 
 	public void gyroTurn(double ndeg) throws InterruptedException
 	{
-		GyroWatcher gw = new GyroWatcher(gyroSensor);
+		GyroWatcher gw = new GyroWatcher(gyroSensor);		GyroWatcher gw = new GyroWatcher(gyroSensor);
+
 		PIDController pid = new PIDController(0, 0, 0);
 		double timeDelta = 0.1;
-		double currentTime = 0;
 
+		double timeAtTarget = 0.0;
 		pid.pidSetParams(pidP, pidI, pidD);
 		pid.windupGuard = 1.0;
 
@@ -322,8 +325,14 @@ public class HolomicPlayground extends LinearOpMode {
 		while (currentTime < 5.0) {
 			double error = gw.targetError();
 
-			if (Math.abs(gw.angleTo(ndeg)) <= 1) {
-				// break;
+			// If we've been at our target (within a degree) for half a second, we're done.
+			if (Math.abs(gw.angleTo(ndeg)) < 1.0) {
+				timeAtTarget += timeDelta;
+				if (timeAtTarget >= 0.5) {
+					break;
+				}
+			} else {
+				timeAtTarget = 0.0;
 			}
 
 			double control = pid.pidUpdate(error, 1.0);
@@ -397,6 +406,9 @@ public class HolomicPlayground extends LinearOpMode {
 					break;
 				case BTN_B_PRESSED:
 					gyroTurn(90.0);
+					break;
+				case BTN_X_PRESSED:
+					gyroTurn(-90.0);
 					break;
 				case BTN_DPUP_PRESSED:
 					pidP = pidP + 0.1;
