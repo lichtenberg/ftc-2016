@@ -381,17 +381,28 @@ public class HolomicPlayground extends LinearOpMode {
 			double rotateFL = 0.0;
 			double rotateFR = 0.0;
 
+			// Get our current heading and the angle of the omniwheels.
 			double omniWheelAngle = 45.0;
 			double direction = 0.0;
 			double heading = gyroSensor.getHeading();
 
+			// Look for button edge transitions.
 			gbA.updateState(gamepad1);
 
+			// Get the current state of the joystick controls.
 			double yaxis = -gamepad1.left_stick_y;
 			double xaxis = gamepad1.left_stick_x;
 
 			double leftRotate = gamepad1.left_trigger;
 			double rightRotate = gamepad1.right_trigger;
+
+
+			//
+			// The range sensor is not part of the FTC SDK yet.  We read
+			// the range directly from the sensor using I2C
+			//
+			// Try to filter out a little noise by rejecting
+			// -1 (out of range) readings.
 
 			range1Cache = RANGE1Reader.read(RANGE1_REG_START, RANGE1_READ_LENGTH);
 
@@ -400,6 +411,13 @@ public class HolomicPlayground extends LinearOpMode {
 				ultrasonicSensorValue = (int) range1Cache[0];
 			}
 
+
+			//
+			// Our button watcher class returns "events" that correspond
+			// to actions on the regular joystick buttons.   This way we do not
+			// need to look for edges here or deal with the button being
+			// down as we run through the loop multiple times.
+			//
 			switch (gbA.getButtonEvent()) {
 				case BTN_A_PRESSED:
 					holdHeading = !holdHeading;
@@ -432,7 +450,8 @@ public class HolomicPlayground extends LinearOpMode {
 					break;
 			}
 
-			// The right joystick is for rotating in place.
+			// The right joystick is for rotating in place.  We use the bumpers on
+			// the back of the joystick for rotation.
 
 			rotateFR = 0.0;
 			rotateFL = 0.0;
@@ -440,6 +459,16 @@ public class HolomicPlayground extends LinearOpMode {
 			rotateRR = 0.0;
 
 
+			// Let's keep a dead zone when we're close to zero on the joystick bumper
+			// buttons - they're usually zero, but as joysticks get abused they might
+			// float a little above zero.
+			//
+			// For rotation in place, run all the wheels in the same direction.
+			// The negatives below are a little confusing; above in the motor setup
+			// we set two of the wheels to 'reverse' for being on the opposite side
+			// of the robot as you face it.  Holonomic robots don't really have
+			// front vs back.
+			//
 			if (leftRotate > 0.01) {
 				rotateFR = leftRotate;
 				rotateRL = -leftRotate;
@@ -456,22 +485,40 @@ public class HolomicPlayground extends LinearOpMode {
 
 
 
+			// The joystick is not supposed to return values beyond +/- 1,
+			// but just in case...
 			xaxis = Range.clip(xaxis, -1, 1);
 			yaxis = Range.clip(yaxis, -1, 1);
 
 			// Compute our desired heading given the Y and X joystick values.
 			// We could work in radians, but degrees looks better on telemetry.
+			// You don't really need to bother with the trigonometry for a simple
+			// control, but doing it this way lets you do additional transformations
+			// like the "hold heading" feature below.
+
 			direction = Math.toDegrees(Math.atan2(yaxis, xaxis));
 
 			// Add in the offset that our omniwheels are mounted at (45 degrees) and
 			// normalize to +/- 180 degrees.
 			direction = normalizeAngle(direction - omniWheelAngle);
+
+			// "Hold Heading" mode uses the gyro to keep the "front" of the robot facing
+			// the same direction.  The joystick therefore moves in the same direction
+			// no matter where the front of the robot is.
+
 			if (holdHeading) {
 				direction = normalizeAngle(direction - heading);
 			}
 
 			// Compute wheel amounts.  We only need two for normal driving,
 			// since we do the same thing to opposite wheels.
+			// Compute the ratio first, then the magnitude is
+			// done by the hypotenuse distance.
+
+			// None of this stuff is really necessary for joystick driving,
+			// since we have the ratios of the joysticks, but we can use
+			// this to build autonomous code.
+
 			wheelB = Math.cos(Math.toRadians(direction));
 			wheelA = Math.sin(Math.toRadians(direction));
 
@@ -508,8 +555,8 @@ public class HolomicPlayground extends LinearOpMode {
 
 
 
-			// write the values to the motors.   Note that for conventional forward motion we can set the
-			// diagonal wheels to the same power.
+			// write the values to the motors.
+			
 			motorFrontRight.setPower(wheelFR);
 			motorRearLeft.setPower(wheelRL);
 
