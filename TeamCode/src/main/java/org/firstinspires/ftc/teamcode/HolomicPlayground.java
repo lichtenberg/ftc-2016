@@ -68,6 +68,8 @@ enum ButtonEvent {
 		BTN_BRIGHT_PRESSED
 		};
 
+
+
 class GamepadButtonEventMonitor {
 
 	boolean prevA,prevB,prevX,prevY;
@@ -265,7 +267,6 @@ public class HolomicPlayground extends LinearOpMode {
 			Thread.sleep(100);
 		}
 
-
 	}
 
 	public double normalizeAngle(double angle)
@@ -310,10 +311,11 @@ public class HolomicPlayground extends LinearOpMode {
 
 	public void gyroTurn(double ndeg) throws InterruptedException
 	{
-		GyroWatcher gw = new GyroWatcher(gyroSensor);		GyroWatcher gw = new GyroWatcher(gyroSensor);
+		GyroWatcher gw = new GyroWatcher(gyroSensor);
 
 		PIDController pid = new PIDController(0, 0, 0);
-		double timeDelta = 0.1;
+		double timeDelta = 0.005;
+		double currentTime = 0.0;
 
 		double timeAtTarget = 0.0;
 		pid.pidSetParams(pidP, pidI, pidD);
@@ -323,10 +325,14 @@ public class HolomicPlayground extends LinearOpMode {
 		gw.setTargetHeading(ndeg);
 
 		while (currentTime < 5.0) {
+
+			telemetry.addData("Gyro", String.format("%d ", gyroSensor.getHeading()));
+			telemetry.update();
+
 			double error = gw.targetError();
 
 			// If we've been at our target (within a degree) for half a second, we're done.
-			if (Math.abs(gw.angleTo(ndeg)) < 1.0) {
+			if (Math.abs(gw.angleTo(ndeg)) <= 1.0) {
 				timeAtTarget += timeDelta;
 				if (timeAtTarget >= 0.5) {
 					break;
@@ -358,9 +364,13 @@ public class HolomicPlayground extends LinearOpMode {
 	public void runOpMode() throws InterruptedException {
 
 		boolean holdHeading = false;
+		double robotFaceDirection = 0.0;
 
 
 		initRobot();
+
+		telemetry.addData("init","Gyro Calibrated");
+		telemetry.update();
 
 		waitForStart();
 
@@ -421,6 +431,9 @@ public class HolomicPlayground extends LinearOpMode {
 			switch (gbA.getButtonEvent()) {
 				case BTN_A_PRESSED:
 					holdHeading = !holdHeading;
+					if (holdHeading) {
+						robotFaceDirection = gyroSensor.getHeading();
+					}
 					break;
 				case BTN_B_PRESSED:
 					gyroTurn(90.0);
@@ -507,7 +520,7 @@ public class HolomicPlayground extends LinearOpMode {
 			// no matter where the front of the robot is.
 
 			if (holdHeading) {
-				direction = normalizeAngle(direction - heading);
+				direction = normalizeAngle(direction - (heading - robotFaceDirection));
 			}
 
 			// Compute wheel amounts.  We only need two for normal driving,
@@ -556,7 +569,7 @@ public class HolomicPlayground extends LinearOpMode {
 
 
 			// write the values to the motors.
-			
+
 			motorFrontRight.setPower(wheelFR);
 			motorRearLeft.setPower(wheelRL);
 
@@ -569,10 +582,10 @@ public class HolomicPlayground extends LinearOpMode {
 			telemetry.addData("Wheel", String.format("%f %f %f %f", wheelFL, wheelFR, wheelRL, wheelRR));
 			telemetry.addData("Left", String.format("%d/%d", motorFrontLeft.getCurrentPosition(), motorRearLeft.getCurrentPosition()));
 			telemetry.addData("Right", String.format("%d/%d", motorFrontRight.getCurrentPosition(), motorRearRight.getCurrentPosition()));
-			telemetry.addData("Gyro", String.format("%d  %f", gyroSensor.getHeading(), direction));
+			telemetry.addData("Gyro", String.format("%d ", gyroSensor.getHeading()));
 			telemetry.addData("Ultra Sonic", ultrasonicSensorValue);
 			telemetry.addData("ODS", odsSensorValue);
-			telemetry.addData("HoldHeading",holdHeading);
+			telemetry.addData("HoldHeading",String.format("%s %f", holdHeading ? "yes" : "no",robotFaceDirection));
 			telemetry.addData("PID","P=%f  I=%f  D=%f", pidP, pidI, pidD);
 			telemetry.update();
 
