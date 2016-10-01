@@ -1,33 +1,7 @@
-/* Copyright (c) 2014 Qualcomm Technologies Inc
-
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without modification,
-are permitted (subject to the limitations in the disclaimer below) provided that
-the following conditions are met:
-
-Redistributions of source code must retain the above copyright notice, this list
-of conditions and the following disclaimer.
-
-Redistributions in binary form must reproduce the above copyright notice, this
-list of conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.
-
-Neither the name of Qualcomm Technologies Inc nor the names of its contributors
-may be used to endorse or promote products derived from this software without
-specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS
-LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
-THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
+/**
+ * FTC MentorBot code
+ * Mitch Lichtenberg
+ */
 
 package org.firstinspires.ftc.teamcode;
 
@@ -50,7 +24,6 @@ import org.firstinspires.ftc.teamcode.PIDController;
 
 /**
  * TeleOp Mode
- * <p>
  * Enables control of the robot via the gamepad
  */
 
@@ -70,6 +43,12 @@ enum ButtonEvent {
 
 
 
+//
+// The GamepadButtonEventMonitor class is used to translate button-down
+// events into single events that you can detect in the main loop.  We generally
+// only want to know when the button is pressed, not know it is still held down
+// so this simple class gives us a single event per up-to-down transition.
+//
 class GamepadButtonEventMonitor {
 
 	boolean prevA,prevB,prevX,prevY;
@@ -126,6 +105,13 @@ class GamepadButtonEventMonitor {
 	}
 }
 
+
+//
+// The GyroWatcher class is a wrapper around the regular Gyro.   It basically
+// remembers a starting position for the gyro and returns headings relative to
+// that starting position.   For example you can say "Remember this angle" and
+// subsequent requests for the heading are relative to that angle
+//
 class GyroWatcher {
 
 	GyroSensor gyro;
@@ -181,6 +167,10 @@ class GyroWatcher {
 	}
 }
 
+//
+// Here is our main OpMode class.  We are using LinearOpModes now because they're easier for
+// students to understand.
+//
 @TeleOp(name="HolomicPlayground", group="MentorBot")
 public class HolomicPlayground extends LinearOpMode {
 
@@ -196,6 +186,11 @@ public class HolomicPlayground extends LinearOpMode {
 	int odsSensorValue;
 	int ultrasonicSensorValue;
 
+	//
+	// FTC SDK does not yet support the Modern Robotics ultrasonic range finder.   So,
+	// we will do direct I2C commands to it.   It looks like FTC has made I2C devices
+	// easier this year compared to last year.
+	//
 	I2cAddr RANGE1ADDRESS = new I2cAddr(0x14); //Default I2C address for MR Range (7-bit)
 	public static final int RANGE1_REG_START = 0x04; //Register to start reading
 	public static final int RANGE1_READ_LENGTH = 2; //Number of byte to read
@@ -203,10 +198,15 @@ public class HolomicPlayground extends LinearOpMode {
 	public I2cDevice RANGE1;
 	public I2cDeviceSynch RANGE1Reader;
 
+	//
+	// Set this to true to enable the use of PID modes on the motor controllers.
+	// (actually, don't.  They do not appear to work).
+	//
 	public final boolean usePIDMode = false;
 
 	GamepadButtonEventMonitor gbA;
 
+	// Our GyroTurn default PID values.
 	double pidP = 1.1;
 	double pidI = 0.0;
 	double pidD = 0.3;
@@ -216,15 +216,13 @@ public class HolomicPlayground extends LinearOpMode {
 	 * Constructor
 	 */
 	public HolomicPlayground() {
+
 		gbA = new GamepadButtonEventMonitor();
 	}
 
 	/*
-	 * Code to run when the op mode is first enabled goes here
-	 *
-	 * @see com.qualcomm.robotcore.eventloop.opmode.OpMode#start()
+	 * Robot initialization code.
 	 */
-	//@Override
 	public void initRobot()  throws InterruptedException {
 		/*
 		 * Use the hardwareMap to get the dc motors and servos by name. Note
@@ -262,6 +260,10 @@ public class HolomicPlayground extends LinearOpMode {
 		RANGE1Reader = new I2cDeviceSynchImpl(RANGE1, RANGE1ADDRESS, false);
 		RANGE1Reader.engage();
 
+		//
+		// Calibrate the gyro.   It takes a few seconds to do this, but once calibrated
+		// it seems to be rock steady when the robot is still.   No more drift!
+		//
 		gyroSensor.calibrate();
 		while (gyroSensor.isCalibrating()) {
 			Thread.sleep(100);
@@ -269,6 +271,9 @@ public class HolomicPlayground extends LinearOpMode {
 
 	}
 
+	//
+	// normalizeAngle takes an angle and re-represents it as +/- 180 degrees.
+	//
 	public double normalizeAngle(double angle)
 	{
 		while (angle > 360.0) {
@@ -290,12 +295,13 @@ public class HolomicPlayground extends LinearOpMode {
 
 	private void setAllMotors(double val)
 	{
-		double deadBand = 0.06;
+		double deadBand = 0.06;		// Level at which motors buzz but don't move.
 
 		val = Range.clip(val, -1.0, 1.0);
 
 		val = -val;
 
+		// Constrain motor power to avoid the deadband.
 		if (val != 0) {
 			if ((val > 0) && (val < deadBand)) val = deadBand;
 			if ((val < 0) && (val > -deadBand)) val = -deadBand;
@@ -356,9 +362,9 @@ public class HolomicPlayground extends LinearOpMode {
 
 	}
 	/*
-	 * This method will be called repeatedly in a loop
-	 *
-	 * @see com.qualcomm.robotcore.eventloop.opmode.OpMode#run()
+	 * runOpMode() is called when the operator presses 'init'.
+	 * We run up to 'waitForStart()' and continue after the start
+	 * button is pressed.
 	 */
 	@Override
 	public void runOpMode() throws InterruptedException {
@@ -463,8 +469,7 @@ public class HolomicPlayground extends LinearOpMode {
 					break;
 			}
 
-			// The right joystick is for rotating in place.  We use the bumpers on
-			// the back of the joystick for rotation.
+			// These values hold the power to the motors for rotation.
 
 			rotateFR = 0.0;
 			rotateFL = 0.0;
