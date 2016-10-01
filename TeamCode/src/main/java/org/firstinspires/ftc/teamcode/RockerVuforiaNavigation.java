@@ -195,11 +195,7 @@ public class RockerVuforiaNavigation extends LinearOpMode {
          *
          * </ol>
          *
-         * This example places the "stones" image on the perimeter wall to the Left
-         *  of the Red Driver station wall.  Similar to the Red Beacon Location on the Res-Q
          *
-         * This example places the "chips" image on the perimeter wall to the Right
-         *  of the Blue Driver station.  Similar to the Blue Beacon Location on the Res-Q
          *
          * See the doc folder of this project for a description of the field Axis conventions.
          *
@@ -217,13 +213,23 @@ public class RockerVuforiaNavigation extends LinearOpMode {
          * - Finally, we translate it back along the X axis towards the red audience wall.
          */
 
-        /* The targets closest to the driver stations are 60" from the corner.
-           The targets closest to the audience are 96" from the corner.
+        /*
+         * The targets are at the following locations in the field's coordinate space:
+         *
+         * Asset     XCoord  YCoord
+         * Wheels     305    1790
+         * Legos     -914    1790
+         * Tools    -1790     914
+         * Gears    -1790    -305
+         */
+
+        /*
+         * The red targets move negative along the X axis.
          */
         OpenGLMatrix gearsTargetLocationOnField = OpenGLMatrix
                 /* Then we translate the target off to the RED WALL. Our translation here
                 is a negative translation in X.*/
-                .translation(-inchToMm(60.0f), 0, 0)
+                .translation(-inchToMm(mmFTCFieldWidth/2.0f), -305.0f, 0)
                 .multiplied(Orientation.getRotationMatrix(
                         /* First, in the fixed (field) coordinate system, we rotate 90deg in X, then 90 in Z */
                         AxesReference.EXTRINSIC, AxesOrder.XZX,
@@ -231,7 +237,7 @@ public class RockerVuforiaNavigation extends LinearOpMode {
         OpenGLMatrix toolsTargetLocationOnField = OpenGLMatrix
                 /* Then we translate the target off to the RED WALL. Our translation here
                 is a negative translation in X.*/
-                .translation(-inchToMm(96.0f), 0, 0)
+                .translation(-inchToMm(mmFTCFieldWidth/2.0f), 914.0f, 0)
                 .multiplied(Orientation.getRotationMatrix(
                         /* First, in the fixed (field) coordinate system, we rotate 90deg in X, then 90 in Z */
                         AxesReference.EXTRINSIC, AxesOrder.XZX,
@@ -244,14 +250,15 @@ public class RockerVuforiaNavigation extends LinearOpMode {
         RobotLog.ii(TAG, "Tools Target=%s", format(toolsTargetLocationOnField));
 
        /*
-        * To place the Stones Target on the Blue Audience wall:
+        * The blue targets move along the Y axis.
+        * To place targets on the Blue Audience wall:
         * - First we rotate it 90 around the field's X axis to flip it upright
         * - Finally, we translate it along the Y axis towards the blue audience wall.
         */
         OpenGLMatrix wheelsTargetLocationOnField = OpenGLMatrix
                 /* Then we translate the target off to the Blue Audience wall.
                 Our translation here is a positive translation in Y.*/
-                .translation(0, inchToMm(60.0f), 0)
+                .translation(305.0f, inchToMm(mmFTCFieldWidth/2.0f), 0)
                 .multiplied(Orientation.getRotationMatrix(
                         /* First, in the fixed (field) coordinate system, we rotate 90deg in X */
                         AxesReference.EXTRINSIC, AxesOrder.XZX,
@@ -260,7 +267,7 @@ public class RockerVuforiaNavigation extends LinearOpMode {
         OpenGLMatrix legosTargetLocationOnField = OpenGLMatrix
                 /* Then we translate the target off to the Blue Audience wall.
                 Our translation here is a positive translation in Y.*/
-                .translation(0, inchToMm(96.0f), 0)
+                .translation(-914.0f, inchToMm(mmFTCFieldWidth/2.0f), 0)
                 .multiplied(Orientation.getRotationMatrix(
                         /* First, in the fixed (field) coordinate system, we rotate 90deg in X */
                         AxesReference.EXTRINSIC, AxesOrder.XZX,
@@ -332,16 +339,24 @@ public class RockerVuforiaNavigation extends LinearOpMode {
         while (opModeIsActive()) {
 
             for (VuforiaTrackable trackable : allTrackables) {
+
+                boolean visible = ((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible();
                 /**
                  * getUpdatedRobotLocation() will return null if no new information is available since
                  * the last time that call was made, or if the trackable is not currently visible.
                  * getRobotLocation() will return null if the trackable is not currently visible.
                  */
-                telemetry.addData(trackable.getName(), ((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible() ? "Visible" : "Not Visible");    //
+                telemetry.addData(trackable.getName(),  visible? "Visible" : "Not Visible");    //
 
                 OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener)trackable.getListener()).getUpdatedRobotLocation();
                 if (robotLocationTransform != null) {
                     lastLocation = robotLocationTransform;
+                }
+
+                if (visible) {
+                    OpenGLMatrix targetPose = ((VuforiaTrackableDefaultListener) trackable.getListener()).getPose();
+                    telemetry.addData(trackable.getName()+"_pose",  targetPose.formatAsTransform());    //
+
                 }
             }
             /**
