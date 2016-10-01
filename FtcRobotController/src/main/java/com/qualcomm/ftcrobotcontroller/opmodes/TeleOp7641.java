@@ -28,6 +28,9 @@ public class TeleOp7641 extends OpMode{
 	DcMotor motorRightSecondary;
 	DcMotor motorLeftPrimary;
 	DcMotor motorLeftSecondary;
+    DcMotor motorSpool;
+    DcMotor motorTape;
+    DcMotor motorAiming;
     Servo zipServoRight;
 	Servo zipServoLeft;
 	Servo personDropperServo;
@@ -58,14 +61,17 @@ public class TeleOp7641 extends OpMode{
 		 */
 		motorRightPrimary = hardwareMap.dcMotor.get("motor-fr");
 		motorLeftPrimary = hardwareMap.dcMotor.get("motor-fl");
-
 		motorRightSecondary = hardwareMap.dcMotor.get("motor-br");
 		motorLeftSecondary = hardwareMap.dcMotor.get("motor-bl");
+        motorSpool = hardwareMap.dcMotor.get("motor-spool");
+        motorTape = hardwareMap.dcMotor.get("motor-tape");
+        motorAiming = hardwareMap.dcMotor.get("motor-aiming");
         zipServoRight = hardwareMap.servo.get("servo-rzip");
 		zipServoLeft = hardwareMap.servo.get("servo-lzip");
         personDropperServo = hardwareMap.servo.get("servo-person");
         blade = hardwareMap.servo.get("blade");
         blade.setPosition(0.9);
+        personDropperServo.setPosition(0.8);
 
         oldB = false;
 		oldX = false;
@@ -82,12 +88,14 @@ public class TeleOp7641 extends OpMode{
 	@Override
 	public void loop() {
 
-
-        if (gamepad2.x) {
-                blade.setPosition(0.9);
+        // Toggle Barrier
+        if (gamepad2.x && !oldX) {
+                blade.setPosition(0.0);
+                oldX = true;
         }
-        else {
-            blade.setPosition(0.0);
+        if (gamepad2.x && oldX) {
+                blade.setPosition(0.9);
+                oldX = false;
         }
 
         if (gamepad2.right_trigger > 0){
@@ -111,7 +119,19 @@ public class TeleOp7641 extends OpMode{
         else {
             personDropperServo.setPosition(0.8);
         }
+        // Spool Extension
+        if (gamepad2.dpad_down){
+            motorSpool.setPower(1.0);
+        }
+        if (gamepad2.dpad_up) {
+            motorSpool.setPower(-1.0);
+        }
+        if (!gamepad2.dpad_up && !gamepad2.dpad_down){
+            motorSpool.setPower(0.0);
+        }
 
+        motorAiming.setPower(gamepad2.left_stick_y/2);
+        motorTape.setPower(-gamepad2.right_stick_y/4);
 
         // tank drive
         float left = -gamepad1.left_stick_y;
@@ -139,6 +159,12 @@ public class TeleOp7641 extends OpMode{
             motorRightSecondary.setPower(1.0);
             motorLeftPrimary.setPower(1.0);
             motorLeftSecondary.setPower(1.0);
+        }
+        if (gamepad1.x){
+            motorRightPrimary.setPower(-1.0);
+            motorRightSecondary.setPower(-1.0);
+            motorLeftPrimary.setPower(-1.0);
+            motorLeftSecondary.setPower(-1.0);
         }
 
         if (gamepad1.b){
